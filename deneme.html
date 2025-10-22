@@ -9,8 +9,303 @@
     <meta http-equiv="Expires" content="0">
     <title>Monopoly Game v3.2 (Bigger Board + End Turn)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
     <style>
+        * {
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a5f3f 0%, #2d8659 50%, #1a5f3f 100%);
+            background-attachment: fixed;
+            overflow-x: hidden;
+        }
+        
+        .game-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 800;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            background: linear-gradient(135deg, #fbbf24, #f59e0b, #d97706);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            color: #1a5f3f;
+            border-bottom: 3px solid #c9a66b;
+            padding-bottom: 8px;
+        }
+        
+        .card {
+            background: linear-gradient(135deg, #f5e6d3 0%, #ffffff 50%, #f5e6d3 100%);
+            border: 4px solid #c9a66b;
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            font-weight: 600;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            font-weight: 600;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 18px rgba(5, 150, 105, 0.4);
+        }
+        
+        /* Enhanced Character Selection */
+        .character-selection {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border: 2px solid #e2e8f0;
+        }
+        
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-top: 1rem;
+        }
+        
+        .character-option {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+            background: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+            padding: 12px;
+        }
+        
+        .character-option:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 12px 20px rgba(0,0,0,0.15);
+        }
+        
+        .character-option.selected {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            box-shadow: 0 0 25px rgba(59, 130, 246, 0.5);
+            transform: scale(1.08);
+        }
+        
+        .character-option.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            filter: grayscale(100%);
+        }
+        
+        .character-option.disabled:hover {
+            transform: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+        }
+        
+        .character-emoji {
+            font-size: 3.5rem;
+            margin-bottom: 8px;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.2));
+        }
+        
+        .character-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #374151;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Enhanced Map Selection */
+        .map-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 1rem;
+        }
+        
+        .map-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid #e5e7eb;
+            background: white;
+            padding: 16px 12px;
+            text-align: center;
+        }
+        
+        .map-option:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            border-color: #93c5fd;
+        }
+        
+        .map-option.selected {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+        }
+        
+        .map-emoji {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+        
+        .map-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        /* Enhanced Form Elements */
+        .form-input {
+            border: 2px solid #d1d5db;
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .form-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            outline: none;
+        }
+        
+        /* Enhanced Player Cards */
+        .player-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+        
+        .player-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+        }
+        
+        .player-card.current {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+        }
+        
+        /* Enhanced Dice */
+        .dice {
+            font-size: 4rem;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            border: 4px solid #2d3748;
+            background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+        
+        .dice:hover {
+            transform: rotate(5deg) scale(1.05);
+        }
+        
+        /* Enhanced Modal */
+        .modal-overlay {
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            border: 4px solid #c9a66b;
+        }
+        
+        /* Enhanced Game Board */
+        .board {
+            display: grid;
+            grid-template-columns: 130px repeat(9, 200px) 130px;
+            grid-template-rows: 130px repeat(9, 200px) 130px;
+            gap: 3px;
+            width: 98vmin;
+            height: 98vmin;
+            max-width: 1400px;
+            max-height: 1400px;
+            margin: auto;
+            border: 8px solid #1a5f3f;
+            background: linear-gradient(135deg, #f5e6d3 0%, #e8d4ba 50%, #f5e6d3 100%);
+            box-shadow: 0 25px 80px rgba(0,0,0,0.4), inset 0 0 30px rgba(255,255,255,0.3);
+            border-radius: 12px;
+            position: relative;
+        }
+        
+        .board::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            right: -8px;
+            bottom: -8px;
+            background: linear-gradient(135deg, #c9a66b 0%, #8b6f47 50%, #c9a66b 100%);
+            border-radius: 12px;
+            z-index: -1;
+        }
+        
+        .space {
+            border: 2px solid #2d3748;
+            position: relative;
+            background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            text-align: center;
+            padding: 4px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+            border-radius: 4px;
+        }
+        
+        .space:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 5;
+        }
         @media (max-width: 900px) {
             /* ...existing mobile styles... */
             #mobile-controls-bar {
@@ -35,73 +330,122 @@
                 margin-bottom: 120px;
             }
         }
-        
-        #controls-bar {
-            flex-direction: column;
-            gap: 8px;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(255,255,255,0.95);
-            z-index: 50;
-            box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
-            padding: 8px 0;
+        /* Mobile responsive improvements */
+        @media (max-width: 900px) {
+            html, body {
+                height: 100%;
+                min-height: 100vh;
+                width: 100vw;
+                overflow-x: hidden;
+            }
+            #game-container {
+                min-height: 100vh;
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+            }
+            #game-container.active #mobile-controls-bar {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: #e6ffe6;
+                z-index: 100;
+                box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+                padding: 20px 0 20px 0;
+                margin-top: 0;
+                border-top: 2px solid #a3e635;
+            }
+            #game-log {
+                margin-bottom: 120px;
+            }
+            #players-info {
+                flex-direction: column;
+                gap: 8px;
+                max-width: 100vw;
+                overflow-x: auto;
+            }
+            .player-card {
+                min-width: 220px;
+                max-width: 98vw;
+                font-size: 13px;
+                padding: 8px;
+            }
+            .property-mini-icon {
+                min-width: 32px;
+                font-size: 10px;
+                padding: 2px 4px;
+            }
+            #controls-bar {
+                flex-direction: column;
+                gap: 8px;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: rgba(255,255,255,0.95);
+                z-index: 50;
+                box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+                padding: 8px 0;
+            }
+            
+            .character-emoji {
+                font-size: 2.5rem;
+            }
+            
+            .character-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+            }
+            
+            .map-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .board {
+                width: 98vmin;
+                height: 98vmin;
+                grid-template-columns: 60px repeat(9, 1fr) 60px;
+                grid-template-rows: 60px repeat(9, 1fr) 60px;
+                gap: 2px;
+                border: 4px solid #1a5f3f;
+            }
+            
+            .space {
+                font-size: 6px;
+                padding: 2px;
+            }
         }
         
-        body {
-            font-family: 'Poppins', sans-serif;
-            overflow: hidden;
-            background: linear-gradient(135deg, #1a5f3f 0%, #2d8659 50%, #1a5f3f 100%);
-            background-attachment: fixed;
+        @media (max-width: 480px) {
+            .character-emoji {
+                font-size: 2rem;
+            }
+            
+            .character-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+            }
+            
+            .map-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .board {
+                grid-template-columns: 50px repeat(9, 1fr) 50px;
+                grid-template-rows: 50px repeat(9, 1fr) 50px;
+            }
+            
+            .space {
+                font-size: 5px;
+                padding: 1px;
+            }
         }
-        .board {
-            display: grid;
-            grid-template-columns: 260px repeat(18, 400px) 260px;
-            grid-template-rows: 260px repeat(18, 400px) 260px;
-            gap: 3px;
-            width: 98vmin;
-            height: 98vmin;
-            max-width: 1400px;
-            max-height: 1400px;
-            margin: auto;
-            border: 8px solid #1a5f3f;
-            background: linear-gradient(135deg, #f5e6d3 0%, #e8d4ba 50%, #f5e6d3 100%);
-            box-shadow: 0 25px 80px rgba(0,0,0,0.4), inset 0 0 30px rgba(255,255,255,0.3);
-            border-radius: 12px;
-            position: relative;
-        }
-        .board::before {
-            content: '';
-            position: absolute;
-            top: -8px;
-            left: -8px;
-            right: -8px;
-            bottom: -8px;
-            background: linear-gradient(135deg, #c9a66b 0%, #8b6f47 50%, #c9a66b 100%);
-            border-radius: 12px;
-            z-index: -1;
-        }
-        .space {
-            border: 2px solid #2d3748;
-            position: relative;
-            background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 10px;
-            text-align: center;
-            padding: 4px;
-            overflow: hidden;
-            transition: all 0.2s ease;
-            border-radius: 4px;
-        }
-        .space:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            z-index: 5;
-        }
+        
         .corner { grid-column: span 1; grid-row: span 1; }
         .top-row { grid-column: span 1; grid-row: 1; }
         .bottom-row { grid-column: span 1; grid-row: 11; }
@@ -173,15 +517,13 @@
             position: absolute;
             width: 72px;
             height: 72px;
-            font-size: 120px;
+            font-size: 60px;
             line-height: 72px;
             text-align: center;
             transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             z-index: 10;
             filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
             animation: pieceFloat 2s ease-in-out infinite;
-            scale: 1.3;
-padding-bottom: 20;
         }
         @keyframes pieceFloat {
             0%, 100% { transform: translateY(0px) scale(1); }
@@ -404,7 +746,7 @@ padding-bottom: 20;
             /* Character selection grid on mobile */
             #main-character-select {
                 display: grid;
-                grid-template-columns: repeat(8, 2fr);
+                grid-template-columns: repeat(4, 1fr);
                 gap: 8px;
             }
             
@@ -416,7 +758,7 @@ padding-bottom: 20;
             
             /* Map selection mobile */
             #main-map-select {
-                grid-template-columns: repeat(4, 2fr);
+                grid-template-columns: repeat(2, 1fr);
                 gap: 8px;
             }
             
@@ -445,8 +787,8 @@ padding-bottom: 20;
             .board {
                 width: 98vmin;
                 height: 98vmin;
-                grid-template-columns: 120px repeat(18, 2fr) 120px;
-                grid-template-rows: 120px repeat(18, 2fr) 120px;
+                grid-template-columns: 60px repeat(9, 1fr) 60px;
+                grid-template-rows: 60px repeat(9, 1fr) 60px;
                 gap: 2px;
                 border: 4px solid #1a5f3f;
             }
@@ -465,10 +807,7 @@ padding-bottom: 20;
             
             /* Smaller player pieces */
             .player-piece {
-                            scale: 1.3;
-padding-bottom: 20;
-
-                font-size: 28px;
+                font-size: 14px;
                 width: 18px;
                 height: 18px;
             }
@@ -889,8 +1228,8 @@ padding-bottom: 20;
             
             /* 📱 GAME BOARD - Extra Small */
             .board {
-                grid-template-columns: 100px repeat(18, 1fr) 100px;
-                grid-template-rows: 100px repeat(18, 1fr) 100px;
+                grid-template-columns: 50px repeat(9, 1fr) 50px;
+                grid-template-rows: 50px repeat(9, 1fr) 50px;
             }
             
             .space {
@@ -903,10 +1242,7 @@ padding-bottom: 20;
             }
             
             .player-piece {
-                            scale: 1.3;
-padding-bottom: 20;
-
-                font-size: 24px;
+                font-size: 12px;
                 width: 16px;
                 height: 16px;
             }
@@ -934,7 +1270,7 @@ padding-bottom: 20;
                 font-size: 13px;
                 padding: 8px 12px;
             }
-        }
+            
             /* 📱 GAME BOARD - Extra Small */
             .board {
                 grid-template-columns: 50px repeat(9, 1fr) 50px;
@@ -951,10 +1287,7 @@ padding-bottom: 20;
             }
             
             .player-piece {
-                            scale: 1.3;
-padding-bottom: 20;
-
-                font-size: 24px;
+                font-size: 12px;
                 width: 16px;
                 height: 16px;
             }
@@ -1206,28 +1539,7 @@ padding-bottom: 20;
                 </div>
             </div>
             
-            <div class="flex items-center gap-2">
-                <input id="privateGameCheckbox" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
-                <label for="privateGameCheckbox" class="text-sm font-medium text-gray-700">Private Game (won't appear in public games list)</label>
-            </div>
-            
             <button id="createGameBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300">Create New Game</button>
-        </div>
-
-        <div class="my-6 flex items-center">
-            <hr class="flex-grow border-t border-gray-300">
-            <span class="px-4 text-gray-500">OR</span>
-            <hr class="flex-grow border-t border-gray-300">
-        </div>
-
-        <!-- Public Games List -->
-        <div class="space-y-4">
-            <h3 class="text-lg font-semibold text-gray-800">Public Games</h3>
-            <div id="public-games-list" class="space-y-2 max-h-48 overflow-y-auto">
-                <!-- Public games will be listed here -->
-                <p class="text-gray-500 text-sm">Loading games...</p>
-            </div>
-            <button id="refreshGamesBtn" class="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition duration-300 text-sm">🔄 Refresh List</button>
         </div>
 
         <div class="my-6 flex items-center">
@@ -1253,15 +1565,6 @@ padding-bottom: 20;
                  <button id="copyGameIdBtn" class="bg-gray-200 p-3 rounded-lg hover:bg-gray-300">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                  </button>
-            </div>
-            <div class="mt-3">
-                <p class="text-gray-600 text-sm">Or share this direct link:</p>
-                <div class="flex items-center gap-2 mt-1">
-                    <input id="gameLinkInput" type="text" readonly class="flex-1 text-sm font-mono p-2 bg-gray-100 rounded border" onclick="this.select()">
-                    <button id="copyLinkBtn" class="bg-blue-500 text-white px-3 py-2 rounded hover:bg-blue-600 text-sm">
-                        Copy Link
-                    </button>
-                </div>
             </div>
         </div>
 
@@ -1398,45 +1701,11 @@ padding-bottom: 20;
             🌙 Dark Mode
         </button>
         
-        <!-- 🔗 Game Link Display (Top Right, below dark mode) -->
-        <div id="game-link-display" class="absolute top-16 right-4 bg-white border border-gray-300 rounded-lg p-2 shadow-lg hidden z-20">
-            <div class="text-xs text-gray-600 mb-1">Game Link:</div>
-            <div class="flex gap-1">
-                <input id="game-link-input" type="text" readonly class="text-xs bg-gray-50 border border-gray-300 rounded px-2 py-1 flex-1 min-w-0" style="font-size: 10px;">
-                <button id="copy-game-link-btn" class="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600">
-                    📋
-                </button>
-            </div>
-        </div>
-        
         <!-- Player Info and Controls -->
         <div id="left-panel" class="w-full lg:w-1/4 bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-4 flex flex-col gap-3 overflow-y-auto border-2 border-gray-200">
             <h2 class="text-2xl font-bold text-center">Players</h2>
             <div id="players-info" class="flex-grow space-y-2">
                 <!-- Player cards will be here -->
-            </div>
-            
-            <!-- Game Link Display (moved from top-right) -->
-            <div id="game-link-display-mobile" class="hidden border-t-2 border-gray-200 pt-3">
-                <div class="text-xs text-gray-600 mb-1">Game Link:</div>
-                <div class="flex gap-1">
-                    <input id="game-link-input-mobile" type="text" readonly class="text-xs bg-gray-50 border border-gray-300 rounded px-2 py-1 flex-1 min-w-0" style="font-size: 10px;">
-                    <button id="copy-game-link-btn-mobile" class="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600">
-                        📋
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Chat Panel -->
-            <div id="chat-panel" class="flex flex-col gap-3 border-t-2 border-gray-200 pt-3" style="display: none;">
-                <h3 class="text-xl font-bold text-center">💬 Chat</h3>
-                <div id="chat-messages" class="flex-grow space-y-2 overflow-y-auto max-h-64 bg-gray-50 p-2 rounded-lg resize-y min-h-32">
-                    <!-- Chat messages will be here -->
-                </div>
-                <div class="flex gap-2">
-                    <input id="chat-input" type="text" placeholder="Type a message..." class="flex-grow px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" maxlength="200">
-                    <button id="chat-send-btn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-200">Send</button>
-                </div>
             </div>
         </div>
         
@@ -1673,20 +1942,6 @@ padding-bottom: 20;
                 reconnectAttempts = 0;
                 connectionStatus = 'connected';
                 updateConnectionIndicator();
-                
-                // 🔄 Auto-reconnect to previous game if stored
-                const storedGameId = localStorage.getItem('monopolyCurrentGameId');
-                const storedPlayerId = localStorage.getItem('monopolyPlayerId');
-                if (storedGameId && storedPlayerId && !currentGameId) {
-                    console.log('🔄 Auto-reconnecting to game:', storedGameId);
-                    currentGameId = storedGameId;
-                    localPlayer.id = storedPlayerId;
-                    sendMessage({
-                        type: 'get_game',
-                        gameId: storedGameId,
-                        playerId: storedPlayerId
-                    });
-                }
             };
 
             ws.onmessage = (event) => {
@@ -1837,10 +2092,6 @@ padding-bottom: 20;
                     console.log('📍 Board length:', gameData.settings.board.length);
                     console.log('📍 First property:', gameData.settings.board[1]?.name);
                     
-                    // 🔄 Save session to localStorage for F5 protection
-                    localStorage.setItem('monopolyCurrentGameId', currentGameId);
-                    localStorage.setItem('monopolyPlayerId', localPlayer.id);
-                    
                     // Re-enable create button
                     createGameBtn.disabled = false;
                     createGameBtn.textContent = 'Create New Game';
@@ -1855,10 +2106,6 @@ padding-bottom: 20;
                     gameData = message.game;
                     console.log('✅ Joined game:', currentGameId);
                     console.log('👥 Players in game:', gameData.players.map(p => p.name));
-                    
-                    // 🔄 Save session to localStorage for F5 protection
-                    localStorage.setItem('monopolyCurrentGameId', currentGameId);
-                    localStorage.setItem('monopolyPlayerId', localPlayer.id);
                     
                     // Re-enable join button
                     joinGameBtn.disabled = false;
@@ -1970,14 +2217,6 @@ padding-bottom: 20;
                             }
                         }
                     }
-                    
-                    // 🤖 Bot AI - if current player is a bot, make it move automatically
-                    if (gameData.state === 'playing' && gameData.players && gameData.players[gameData.currentPlayerIndex] && 
-                        gameData.players[gameData.currentPlayerIndex].isBot && 
-                        gameData.players[gameData.currentPlayerIndex].id !== localPlayer.id) {
-                        setTimeout(() => handleBotTurn(), 1500); // Delay for better UX
-                    }
-                    
                     break;
                     
                 case 'game_started':
@@ -2006,16 +2245,6 @@ padding-bottom: 20;
                         renderBoard();
                         updateGameUI();
                     }, 100);
-                    break;
-                    
-                case 'chat_message':
-                    if (message.playerName !== localPlayer.name) {
-                        addChatMessage(message.playerName, message.text);
-                    }
-                    break;
-                    
-                case 'games_list':
-                    displayPublicGames(message.games);
                     break;
                     
                 case 'error':
@@ -2196,7 +2425,6 @@ padding-bottom: 20;
         let selectedGameMode = 'classic';
         let decidedLaterTrades = []; // Trade'ler için "decide later" takibi
         let shownTradeIds = new Set(); // Gösterilen trade ID'lerini takip et
-        let turnTimer = null; // ⏰ Turn timer for auto-end turn
 
         // --- DEFAULT GAME DATA ---
         function getDefaultBoard() {
@@ -2818,7 +3046,6 @@ padding-bottom: 20;
                     gameId: gameId,
                     hostId: localPlayer.id,
                     player: hostPlayer,
-                    private: document.getElementById('privateGameCheckbox').checked,
                     settings: {
                         startingMoney: parseInt(document.getElementById('startingMoney').value),
                         passGoAmount: parseInt(document.getElementById('passGoAmount').value),
@@ -2985,13 +3212,6 @@ padding-bottom: 20;
             );
         });
         
-        // Add Bot button
-        addBotBtn.addEventListener('click', () => {
-            sendMessage({
-                type: 'add_bot'
-            });
-        });
-
         startGameBtn.addEventListener('click', async () => {
             if (gameData.players.length < 2) {
                 showModal("Not Enough Players", "You need at least 2 players to start the game.", [{ text: 'OK', class: 'bg-blue-500', action: hideModal }]);
@@ -3047,29 +3267,10 @@ padding-bottom: 20;
             gameContainer.classList.add('hidden');
             gameSettingsScreen.classList.remove('hidden');
             displayGameId.textContent = currentGameId;
-            
-            // Generate shareable link
-            const currentUrl = window.location.origin + window.location.pathname;
-            const gameLink = `${currentUrl}?gameId=${currentGameId}`;
-            const gameLinkInput = document.getElementById('gameLinkInput');
-            if (gameLinkInput) {
-                gameLinkInput.value = gameLink;
-            }
-            
             populateSettingsEditor(gameData.settings.board);
             
             // Mobilde oyun kontrol butonlarını gizle
             document.body.classList.remove('in-game');
-            
-            // Hide game link display in settings screen
-            const gameLinkDisplay = document.getElementById('game-link-display');
-            const gameLinkDisplayMobile = document.getElementById('game-link-display-mobile');
-            if (gameLinkDisplay) {
-                gameLinkDisplay.classList.add('hidden');
-            }
-            if (gameLinkDisplayMobile) {
-                gameLinkDisplayMobile.classList.add('hidden');
-            }
             
             // Show game-settings-only elements
             const customizeTitle = document.getElementById('customize-board-title');
@@ -3092,16 +3293,6 @@ padding-bottom: 20;
             
             // Mobilde oyun kontrol butonlarını gizle
             document.body.classList.remove('in-game');
-            
-            // Hide game link display in waiting lobby
-            const gameLinkDisplay = document.getElementById('game-link-display');
-            const gameLinkDisplayMobile = document.getElementById('game-link-display-mobile');
-            if (gameLinkDisplay) {
-                gameLinkDisplay.classList.add('hidden');
-            }
-            if (gameLinkDisplayMobile) {
-                gameLinkDisplayMobile.classList.add('hidden');
-            }
             
             gameSettingsScreen.querySelectorAll('input, button').forEach(el => {
                 if (el.id !== 'displayGameId' && el.id !== 'copyGameIdBtn') el.disabled = true;
@@ -3180,32 +3371,6 @@ padding-bottom: 20;
             
             // Mobilde oyun kontrol butonlarını göstermek için body'ye in-game class'ı ekle
             document.body.classList.add('in-game');
-            
-            // Show chat panel
-            const chatPanel = document.getElementById('chat-panel');
-            if (chatPanel) {
-                chatPanel.style.display = 'flex';
-            }
-            
-            // Show game link display
-            const gameLinkDisplay = document.getElementById('game-link-display');
-            const gameLinkInput = document.getElementById('game-link-input');
-            const gameLinkDisplayMobile = document.getElementById('game-link-display-mobile');
-            const gameLinkInputMobile = document.getElementById('game-link-input-mobile');
-            
-            if (gameLinkDisplay && gameLinkInput) {
-                const currentUrl = window.location.origin + window.location.pathname;
-                const gameLink = `${currentUrl}?gameId=${currentGameId}`;
-                gameLinkInput.value = gameLink;
-                gameLinkDisplay.classList.remove('hidden');
-            }
-            
-            if (gameLinkDisplayMobile && gameLinkInputMobile) {
-                const currentUrl = window.location.origin + window.location.pathname;
-                const gameLink = `${currentUrl}?gameId=${currentGameId}`;
-                gameLinkInputMobile.value = gameLink;
-                gameLinkDisplayMobile.classList.remove('hidden');
-            }
             
             // Hide game-settings-only elements
             const customizeTitle = document.getElementById('customize-board-title');
@@ -3316,9 +3481,7 @@ padding-bottom: 20;
                 }
                 
                 let content = `<div class="font-bold uppercase">${spaceData.name}</div>`;
-                // Price labels removed for cleaner board appearance
                 let priceLabel = '';
-                /*
                 if (spaceData.type === 'property' || spaceData.type === 'railroad' || spaceData.type === 'utility') {
                     if (i >=1 && i <=9) { // bottom row - üstlerinde
                         priceLabel = `<div class="price price-top">💰 $${spaceData.price}</div>`;
@@ -3330,7 +3493,6 @@ padding-bottom: 20;
                         priceLabel = `<div class="price price-left">💰 $${spaceData.price}</div>`;
                     }
                 }
-                */
                 if (spaceData.type === 'property') {
                     const property = gameData.properties[i];
                     let ownersHTML = '';
@@ -3398,39 +3560,10 @@ padding-bottom: 20;
             updateBoardPiecesAndHouses();
             updateControls();
             updateGameLog();
-            
-            // ⏰ Handle turn timer for auto-end turn
-            handleTurnTimer();
-            
             // Leaderboard kaldırıldı
         }
 
-        // ⏰ Handle turn timer for auto-end turn
-        function handleTurnTimer() {
-            if (!gameData || !gameData.players) return;
-            
-            const currentPlayer = gameData.players[gameData.currentPlayerIndex];
-            const isMyTurn = currentPlayer && currentPlayer.id === localPlayer.id;
-            
-            // Clear existing timer
-            if (turnTimer) {
-                clearTimeout(turnTimer);
-                turnTimer = null;
-            }
-            
-            // Start timer if it's our turn and we're not a bot
-            if (isMyTurn && !currentPlayer.isBot) {
-                console.log('⏰ Starting turn timer (90 seconds)');
-                turnTimer = setTimeout(() => {
-                    console.log('⏰ Turn timer expired, auto-ending turn');
-                    // Auto-end turn
-                    sendMessage({
-                        type: 'end_turn',
-                        gameId: currentGameId
-                    });
-                }, 90000); // 1.5 minutes = 90 seconds
-            }
-        }
+        // 🏆 Update Leaderboard - KALDIRILDI
 
         function updatePlayersInfo() {
             if (!gameData || !gameData.players) {
@@ -3483,10 +3616,7 @@ padding-bottom: 20;
                         ${propertiesHTML}
                         <div class="flex justify-between items-center mt-2">
                             ${p.inJail ? `<div class="text-red-500 font-bold text-sm flex items-center gap-1">🔒 IN JAIL</div>` : '<div></div>'}
-                            <div class="flex gap-2">
-                                ${p.id === localPlayer.id && p.money < 0 ? `<button onclick="window.declareBankruptcy()" class="text-xs bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1 rounded-lg hover:from-red-600 hover:to-red-700 shadow transition-all">💥 İflas Et</button>` : ''}
-                                ${p.id !== localPlayer.id && gameData.settings.allowTrading ? `<button data-player-id="${p.id}" onclick="window.showTradeModal('${p.id}')" class="trade-btn text-xs bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-lg hover:from-blue-600 hover:to-blue-700 shadow transition-all">🤝 Trade</button>` : ''}
-                            </div>
+                            ${p.id !== localPlayer.id && gameData.settings.allowTrading ? `<button data-player-id="${p.id}" onclick="window.showTradeModal('${p.id}')" class="trade-btn text-xs bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-lg hover:from-blue-600 hover:to-blue-700 shadow transition-all">🤝 Trade</button>` : ''}
                         </div>
                     </div>
                 `;
@@ -3512,42 +3642,6 @@ padding-bottom: 20;
                     showPlayerStats(playerId);
                 });
             });
-        }
-
-        // 🤖 Bot AI - Handle bot turns automatically
-        function handleBotTurn() {
-            if (!gameData || !gameData.players || gameData.players[gameData.currentPlayerIndex].id === localPlayer.id) {
-                return; // Not bot's turn or no game data
-            }
-            
-            const bot = gameData.players[gameData.currentPlayerIndex];
-            if (!bot.isBot) return;
-            
-            console.log(`🤖 Bot ${bot.name}'s turn`);
-            
-            // Simple bot AI logic
-            setTimeout(() => {
-                // Roll dice
-                sendMessage({ type: 'roll_dice' });
-                
-                // After rolling, wait a bit then make decisions
-                setTimeout(() => {
-                    // If bot landed on an unowned property, decide whether to buy
-                    const currentSpace = gameData.settings.board[bot.position];
-                    if (currentSpace && currentSpace.type === 'property' && !gameData.properties[bot.position].ownerId) {
-                        const canAfford = bot.money >= currentSpace.price;
-                        if (canAfford && Math.random() > 0.3) { // 70% chance to buy
-                            setTimeout(() => sendMessage({ type: 'buy_property' }), 1000);
-                        } else {
-                            // Don't buy, end turn
-                            setTimeout(() => sendMessage({ type: 'end_turn' }), 1000);
-                        }
-                    } else {
-                        // Not on a buyable property, end turn
-                        setTimeout(() => sendMessage({ type: 'end_turn' }), 1000);
-                    }
-                }, 2000);
-            }, 500);
         }
 
         // 📊 Show Player Statistics Modal
@@ -3645,11 +3739,7 @@ padding-bottom: 20;
             `;
             
             showModal(`📊 Player Statistics`, statsHTML, [
-                { text: 'Close', class: 'bg-blue-500', action: hideModal },
-                ...(playerId === localPlayer.id && player.money < 0 ? [{ text: '💥 İflas Et', class: 'bg-red-600', action: () => {
-                    hideModal();
-                    setTimeout(() => window.declareBankruptcy(), 300);
-                }}] : [])
+                { text: 'Close', class: 'bg-blue-500', action: hideModal }
             ]);
             // Add toggle logic for modal property list
             setTimeout(() => {
@@ -3982,8 +4072,37 @@ padding-bottom: 20;
             const die2 = Math.floor(Math.random() * 6) + 1;
             const total = die1 + die2;
             
-            // 🎲 Check for doubles
-            const isDouble = (die1 === die2);
+            // Show result after animation
+            setTimeout(() => {
+                dice1El.textContent = die1;
+                dice2El.textContent = die2;
+                dice1El.classList.remove('dice-rolling');
+                dice2El.classList.remove('dice-rolling');
+            }, 1000);
+            
+            const oldPosition = currentPlayer.position;
+            const newPosition = (oldPosition + total) % gameData.settings.board.length;
+            
+            let newMoney = currentPlayer.money;
+            let logMessages = [`${currentPlayer.name} rolled a ${die1} and a ${die2}, moving ${total} spaces.`];
+            
+            // Check if player passed GO
+            if (newPosition < oldPosition) {
+                let passGoBonus = gameData.settings.passGoAmount;
+                
+                // 🌟 Lucky player gets double money for first 3 turns
+                if (currentPlayer.isLucky && currentPlayer.luckyTurnsLeft > 0) {
+                    passGoBonus *= 2;
+                    logMessages.push(`⭐ ${currentPlayer.name} is the LUCKY PLAYER and receives DOUBLE GO bonus: $${passGoBonus}!`);
+                } else {
+                    logMessages.push(`${currentPlayer.name} passed GO and collected $${passGoBonus}.`);
+                }
+                
+                newMoney += passGoBonus;
+            }
+            
+            // Track doubles
+            const isDouble = die1 === die2;
             const playersCopy = JSON.parse(JSON.stringify(gameData.players));
             playersCopy[gameData.currentPlayerIndex].position = newPosition;
             playersCopy[gameData.currentPlayerIndex].money = newMoney;
@@ -4188,7 +4307,7 @@ padding-bottom: 20;
                     } else {
                         // Kartın sahibiyim veya hissem var
                         addLog('You own a share of this property.');
-                        handleAfterLanding();
+                        endTurn();
                     }
                     break;
                 case 'go_to_jail':
@@ -4202,14 +4321,8 @@ padding-bottom: 20;
                     payTax(space.amount);
                     break;
                 default:
-                    handleAfterLanding();
+                    endTurn();
             }
-        }
-        
-        // 🎲 Handle actions after landing (rent payment, property actions, etc.)
-        async function handleAfterLanding() {
-            // Always end turn after landing
-            endTurn();
         }
         
         async function buyProperty(position) {
@@ -5727,21 +5840,7 @@ padding-bottom: 20;
              ]);
         }
 
-        // � Declare Bankruptcy
-        window.declareBankruptcy = () => {
-            showModal('💥 İflas Et', 'İflas etmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve oyun dışı kalacaksınız.', [
-                {text: 'İptal', class: 'bg-gray-500', action: hideModal},
-                {text: 'Evet, İflas Et', class: 'bg-red-600', action: () => {
-                    sendMessage({
-                        type: 'declare_bankruptcy',
-                        playerId: localPlayer.id
-                    });
-                    hideModal();
-                }}
-            ]);
-        }
-
-        // �📬 Show Pending Trades Notification
+        // 📬 Show Pending Trades Notification
         function checkPendingTrades() {
             if (!gameData || !gameData.trades) return;
             
@@ -6316,131 +6415,6 @@ padding-bottom: 20;
                 setTimeout(() => { copyGameIdBtn.innerHTML = originalText; }, 2000);
             });
         });
-
-        // Copy game link button event listener
-        const copyLinkBtn = document.getElementById('copyLinkBtn');
-        if (copyLinkBtn) {
-            copyLinkBtn.addEventListener('click', () => {
-                const gameLinkInput = document.getElementById('gameLinkInput');
-                if (gameLinkInput && gameLinkInput.value) {
-                    navigator.clipboard.writeText(gameLinkInput.value).then(() => {
-                        const originalText = copyLinkBtn.textContent;
-                        copyLinkBtn.textContent = 'Copied!';
-                        setTimeout(() => { copyLinkBtn.textContent = originalText; }, 2000);
-                    }).catch(err => {
-                        console.error('Failed to copy link:', err);
-                        copyLinkBtn.textContent = 'Error!';
-                        setTimeout(() => { copyLinkBtn.textContent = originalText; }, 2000);
-                    });
-                }
-            });
-        }
-        
-        // Chat functions
-        function addChatMessage(playerName, text, isOwn = false) {
-            const chatMessages = document.getElementById('chat-messages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `p-2 rounded-lg max-w-xs break-words ${isOwn ? 'bg-blue-100 self-end ml-auto' : 'bg-white'}`;
-            messageDiv.innerHTML = `<strong>${playerName}:</strong> ${text}`;
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-        
-        function sendChatMessage() {
-            const chatInput = document.getElementById('chat-input');
-            const text = chatInput.value.trim();
-            
-            console.log('Chat attempt - text:', text, 'currentGameId:', currentGameId, 'localPlayer:', localPlayer, 'ws state:', ws ? ws.readyState : 'no ws');
-            
-            if (!text) {
-                console.log('Chat: Empty message');
-                return;
-            }
-            
-            if (!currentGameId) {
-                console.log('Chat: No currentGameId');
-                addChatMessage('System', 'Please join a game first', false);
-                return;
-            }
-            
-            if (!localPlayer) {
-                console.log('Chat: No localPlayer');
-                addChatMessage('System', 'Please enter your name first', false);
-                return;
-            }
-            
-            if (!ws || ws.readyState !== WebSocket.OPEN) {
-                console.log('Chat: WebSocket not connected');
-                addChatMessage('System', 'Connection lost. Reconnecting...', false);
-                connectWebSocket();
-                return;
-            }
-            
-            const message = {
-                type: 'chat_message',
-                gameId: currentGameId,
-                playerName: localPlayer.name,
-                text: text
-            };
-            console.log('Sending chat message:', message);
-            
-            try {
-                sendMessage(message);
-                addChatMessage(localPlayer.name, text, true);
-                chatInput.value = '';
-            } catch (error) {
-                console.error('Chat send error:', error);
-                addChatMessage('System', 'Failed to send message: ' + error.message, false);
-            }
-        }
-        
-        // Public games functions
-        function loadPublicGames() {
-            if (!ws || ws.readyState !== WebSocket.OPEN) {
-                console.log('WebSocket not connected, cannot load games');
-                return;
-            }
-            
-            sendMessage({ type: 'list_games' });
-        }
-        
-        function displayPublicGames(games) {
-            const gamesList = document.getElementById('public-games-list');
-            if (!gamesList) return;
-            
-            if (games.length === 0) {
-                gamesList.innerHTML = '<p class="text="text-gray-500 text-sm">No public games available</p>';
-                return;
-            }
-            
-            gamesList.innerHTML = '';
-            
-            games.forEach(game => {
-                const gameDiv = document.createElement('div');
-                gameDiv.className = 'bg-white p-3 rounded-lg border border-gray-200 hover:border-blue-300 cursor-pointer transition-colors';
-                gameDiv.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <div class="font-semibold text-gray-800">${game.gameId}</div>
-                            <div class="text-sm text-gray-600">Host: ${game.hostName}</div>
-                            <div class="text-xs text-gray-500">Map: ${game.map} • Players: ${game.playerCount}/${game.maxPlayers}</div>
-                        </div>
-                        <button class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 transition-colors join-game-btn" data-game-id="${game.gameId}">
-                            Join
-                        </button>
-                    </div>
-                `;
-                
-                // Add click handler for join button
-                const joinBtn = gameDiv.querySelector('.join-game-btn');
-                joinBtn.addEventListener('click', () => {
-                    document.getElementById('gameIdInput').value = game.gameId;
-                    document.getElementById('joinGameBtn').click();
-                });
-                
-                gamesList.appendChild(gameDiv);
-            });
-        }
         
         function init() {
             const storedName = localStorage.getItem('monopolyPlayerName');
@@ -6449,64 +6423,6 @@ padding-bottom: 20;
             playerNameInput.addEventListener('change', () => {
                 localStorage.setItem('monopolyPlayerName', playerNameInput.value);
             });
-            
-            // 🔄 Check for stored game session (F5 protection)
-            const storedGameId = localStorage.getItem('monopolyCurrentGameId');
-            const storedPlayerId = localStorage.getItem('monopolyPlayerId');
-            
-            if (storedGameId && storedPlayerId) {
-                console.log('🔄 Reconnecting to previous game:', storedGameId);
-                currentGameId = storedGameId;
-                localPlayer.id = storedPlayerId;
-                // Auto-reconnect will happen after WebSocket connects
-            }
-            
-            // Check URL parameters for auto-join
-            const urlParams = new URLSearchParams(window.location.search);
-            const autoJoinGameId = urlParams.get('gameId');
-            if (autoJoinGameId) {
-                gameIdInput.value = autoJoinGameId;
-                // Auto-join will happen after WebSocket connects
-                setTimeout(() => {
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        // Check if we need to prompt for name/character
-                        if (!playerNameInput.value.trim()) {
-                            const name = prompt('Enter your name to join the game:');
-                            if (name && name.trim()) {
-                                playerNameInput.value = name.trim();
-                                localStorage.setItem('monopolyPlayerName', name.trim());
-                            } else {
-                                return; // Cancel auto-join if no name provided
-                            }
-                        }
-                        
-                        if (!selectedCharacter) {
-                            // Auto-select first available character
-                            const availableCharacters = ['dog', 'car', 'ship', 'hat', 'thimble', 'boot', 'wheelbarrow', 'iron'];
-                            selectedCharacter = availableCharacters[Math.floor(Math.random() * availableCharacters.length)];
-                            // Update UI to show selected character
-                            document.querySelectorAll('.character-option').forEach(option => {
-                                if (option.dataset.character === selectedCharacter) {
-                                    option.classList.add('ring-2', 'ring-blue-500');
-                                } else {
-                                    option.classList.remove('ring-2', 'ring-blue-500');
-                                }
-                            });
-                        }
-                        
-                        joinGame();
-                    }
-                }, 1000);
-            }
-            
-            // Load public games list
-            loadPublicGames();
-            
-            // Refresh games button
-            const refreshGamesBtn = document.getElementById('refreshGamesBtn');
-            if (refreshGamesBtn) {
-                refreshGamesBtn.addEventListener('click', loadPublicGames);
-            }
             
             // Hide game-settings-only elements on initial load (lobby screen)
             const customizeTitle = document.getElementById('customize-board-title');
@@ -6518,57 +6434,6 @@ padding-bottom: 20;
             if (propertiesEditor) propertiesEditor.style.display = 'none';
             if (lobbyControls) lobbyControls.style.display = 'none';
             if (allowTradingContainer) allowTradingContainer.style.display = 'none';
-            
-            // Chat event listeners
-            const chatInput = document.getElementById('chat-input');
-            const chatSendBtn = document.getElementById('chat-send-btn');
-            
-            if (chatInput && chatSendBtn) {
-                chatSendBtn.addEventListener('click', sendChatMessage);
-                chatInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        sendChatMessage();
-                    }
-                });
-            }
-            
-            // Game link copy button event listener (desktop)
-            const copyGameLinkBtn = document.getElementById('copy-game-link-btn');
-            if (copyGameLinkBtn) {
-                copyGameLinkBtn.addEventListener('click', () => {
-                    const gameLinkInput = document.getElementById('game-link-input');
-                    if (gameLinkInput && gameLinkInput.value) {
-                        navigator.clipboard.writeText(gameLinkInput.value).then(() => {
-                            const originalText = copyGameLinkBtn.innerHTML;
-                            copyGameLinkBtn.innerHTML = '✅';
-                            setTimeout(() => { copyGameLinkBtn.innerHTML = originalText; }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy game link:', err);
-                            copyGameLinkBtn.innerHTML = '❌';
-                            setTimeout(() => { copyGameLinkBtn.innerHTML = originalText; }, 2000);
-                        });
-                    }
-                });
-            }
-            
-            // Game link copy button event listener (mobile)
-            const copyGameLinkBtnMobile = document.getElementById('copy-game-link-btn-mobile');
-            if (copyGameLinkBtnMobile) {
-                copyGameLinkBtnMobile.addEventListener('click', () => {
-                    const gameLinkInputMobile = document.getElementById('game-link-input-mobile');
-                    if (gameLinkInputMobile && gameLinkInputMobile.value) {
-                        navigator.clipboard.writeText(gameLinkInputMobile.value).then(() => {
-                            const originalText = copyGameLinkBtnMobile.innerHTML;
-                            copyGameLinkBtnMobile.innerHTML = '✅';
-                            setTimeout(() => { copyGameLinkBtnMobile.innerHTML = originalText; }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy game link:', err);
-                            copyGameLinkBtnMobile.innerHTML = '❌';
-                            setTimeout(() => { copyGameLinkBtnMobile.innerHTML = originalText; }, 2000);
-                        });
-                    }
-                });
-            }
             
             // Initialize WebSocket connection
             connectWebSocket();

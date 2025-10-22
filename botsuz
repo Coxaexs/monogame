@@ -1416,17 +1416,6 @@ padding-bottom: 20;
                 <!-- Player cards will be here -->
             </div>
             
-            <!-- Game Link Display (moved from top-right) -->
-            <div id="game-link-display-mobile" class="hidden border-t-2 border-gray-200 pt-3">
-                <div class="text-xs text-gray-600 mb-1">Game Link:</div>
-                <div class="flex gap-1">
-                    <input id="game-link-input-mobile" type="text" readonly class="text-xs bg-gray-50 border border-gray-300 rounded px-2 py-1 flex-1 min-w-0" style="font-size: 10px;">
-                    <button id="copy-game-link-btn-mobile" class="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600">
-                        📋
-                    </button>
-                </div>
-            </div>
-            
             <!-- Chat Panel -->
             <div id="chat-panel" class="flex flex-col gap-3 border-t-2 border-gray-200 pt-3" style="display: none;">
                 <h3 class="text-xl font-bold text-center">💬 Chat</h3>
@@ -1673,20 +1662,6 @@ padding-bottom: 20;
                 reconnectAttempts = 0;
                 connectionStatus = 'connected';
                 updateConnectionIndicator();
-                
-                // 🔄 Auto-reconnect to previous game if stored
-                const storedGameId = localStorage.getItem('monopolyCurrentGameId');
-                const storedPlayerId = localStorage.getItem('monopolyPlayerId');
-                if (storedGameId && storedPlayerId && !currentGameId) {
-                    console.log('🔄 Auto-reconnecting to game:', storedGameId);
-                    currentGameId = storedGameId;
-                    localPlayer.id = storedPlayerId;
-                    sendMessage({
-                        type: 'get_game',
-                        gameId: storedGameId,
-                        playerId: storedPlayerId
-                    });
-                }
             };
 
             ws.onmessage = (event) => {
@@ -1837,10 +1812,6 @@ padding-bottom: 20;
                     console.log('📍 Board length:', gameData.settings.board.length);
                     console.log('📍 First property:', gameData.settings.board[1]?.name);
                     
-                    // 🔄 Save session to localStorage for F5 protection
-                    localStorage.setItem('monopolyCurrentGameId', currentGameId);
-                    localStorage.setItem('monopolyPlayerId', localPlayer.id);
-                    
                     // Re-enable create button
                     createGameBtn.disabled = false;
                     createGameBtn.textContent = 'Create New Game';
@@ -1855,10 +1826,6 @@ padding-bottom: 20;
                     gameData = message.game;
                     console.log('✅ Joined game:', currentGameId);
                     console.log('👥 Players in game:', gameData.players.map(p => p.name));
-                    
-                    // 🔄 Save session to localStorage for F5 protection
-                    localStorage.setItem('monopolyCurrentGameId', currentGameId);
-                    localStorage.setItem('monopolyPlayerId', localPlayer.id);
                     
                     // Re-enable join button
                     joinGameBtn.disabled = false;
@@ -1970,14 +1937,6 @@ padding-bottom: 20;
                             }
                         }
                     }
-                    
-                    // 🤖 Bot AI - if current player is a bot, make it move automatically
-                    if (gameData.state === 'playing' && gameData.players && gameData.players[gameData.currentPlayerIndex] && 
-                        gameData.players[gameData.currentPlayerIndex].isBot && 
-                        gameData.players[gameData.currentPlayerIndex].id !== localPlayer.id) {
-                        setTimeout(() => handleBotTurn(), 1500); // Delay for better UX
-                    }
-                    
                     break;
                     
                 case 'game_started':
@@ -2196,7 +2155,6 @@ padding-bottom: 20;
         let selectedGameMode = 'classic';
         let decidedLaterTrades = []; // Trade'ler için "decide later" takibi
         let shownTradeIds = new Set(); // Gösterilen trade ID'lerini takip et
-        let turnTimer = null; // ⏰ Turn timer for auto-end turn
 
         // --- DEFAULT GAME DATA ---
         function getDefaultBoard() {
@@ -2985,13 +2943,6 @@ padding-bottom: 20;
             );
         });
         
-        // Add Bot button
-        addBotBtn.addEventListener('click', () => {
-            sendMessage({
-                type: 'add_bot'
-            });
-        });
-
         startGameBtn.addEventListener('click', async () => {
             if (gameData.players.length < 2) {
                 showModal("Not Enough Players", "You need at least 2 players to start the game.", [{ text: 'OK', class: 'bg-blue-500', action: hideModal }]);
@@ -3063,12 +3014,8 @@ padding-bottom: 20;
             
             // Hide game link display in settings screen
             const gameLinkDisplay = document.getElementById('game-link-display');
-            const gameLinkDisplayMobile = document.getElementById('game-link-display-mobile');
             if (gameLinkDisplay) {
                 gameLinkDisplay.classList.add('hidden');
-            }
-            if (gameLinkDisplayMobile) {
-                gameLinkDisplayMobile.classList.add('hidden');
             }
             
             // Show game-settings-only elements
@@ -3095,12 +3042,8 @@ padding-bottom: 20;
             
             // Hide game link display in waiting lobby
             const gameLinkDisplay = document.getElementById('game-link-display');
-            const gameLinkDisplayMobile = document.getElementById('game-link-display-mobile');
             if (gameLinkDisplay) {
                 gameLinkDisplay.classList.add('hidden');
-            }
-            if (gameLinkDisplayMobile) {
-                gameLinkDisplayMobile.classList.add('hidden');
             }
             
             gameSettingsScreen.querySelectorAll('input, button').forEach(el => {
@@ -3190,21 +3133,11 @@ padding-bottom: 20;
             // Show game link display
             const gameLinkDisplay = document.getElementById('game-link-display');
             const gameLinkInput = document.getElementById('game-link-input');
-            const gameLinkDisplayMobile = document.getElementById('game-link-display-mobile');
-            const gameLinkInputMobile = document.getElementById('game-link-input-mobile');
-            
             if (gameLinkDisplay && gameLinkInput) {
                 const currentUrl = window.location.origin + window.location.pathname;
                 const gameLink = `${currentUrl}?gameId=${currentGameId}`;
                 gameLinkInput.value = gameLink;
                 gameLinkDisplay.classList.remove('hidden');
-            }
-            
-            if (gameLinkDisplayMobile && gameLinkInputMobile) {
-                const currentUrl = window.location.origin + window.location.pathname;
-                const gameLink = `${currentUrl}?gameId=${currentGameId}`;
-                gameLinkInputMobile.value = gameLink;
-                gameLinkDisplayMobile.classList.remove('hidden');
             }
             
             // Hide game-settings-only elements
@@ -3398,39 +3331,10 @@ padding-bottom: 20;
             updateBoardPiecesAndHouses();
             updateControls();
             updateGameLog();
-            
-            // ⏰ Handle turn timer for auto-end turn
-            handleTurnTimer();
-            
             // Leaderboard kaldırıldı
         }
 
-        // ⏰ Handle turn timer for auto-end turn
-        function handleTurnTimer() {
-            if (!gameData || !gameData.players) return;
-            
-            const currentPlayer = gameData.players[gameData.currentPlayerIndex];
-            const isMyTurn = currentPlayer && currentPlayer.id === localPlayer.id;
-            
-            // Clear existing timer
-            if (turnTimer) {
-                clearTimeout(turnTimer);
-                turnTimer = null;
-            }
-            
-            // Start timer if it's our turn and we're not a bot
-            if (isMyTurn && !currentPlayer.isBot) {
-                console.log('⏰ Starting turn timer (90 seconds)');
-                turnTimer = setTimeout(() => {
-                    console.log('⏰ Turn timer expired, auto-ending turn');
-                    // Auto-end turn
-                    sendMessage({
-                        type: 'end_turn',
-                        gameId: currentGameId
-                    });
-                }, 90000); // 1.5 minutes = 90 seconds
-            }
-        }
+        // 🏆 Update Leaderboard - KALDIRILDI
 
         function updatePlayersInfo() {
             if (!gameData || !gameData.players) {
@@ -3512,42 +3416,6 @@ padding-bottom: 20;
                     showPlayerStats(playerId);
                 });
             });
-        }
-
-        // 🤖 Bot AI - Handle bot turns automatically
-        function handleBotTurn() {
-            if (!gameData || !gameData.players || gameData.players[gameData.currentPlayerIndex].id === localPlayer.id) {
-                return; // Not bot's turn or no game data
-            }
-            
-            const bot = gameData.players[gameData.currentPlayerIndex];
-            if (!bot.isBot) return;
-            
-            console.log(`🤖 Bot ${bot.name}'s turn`);
-            
-            // Simple bot AI logic
-            setTimeout(() => {
-                // Roll dice
-                sendMessage({ type: 'roll_dice' });
-                
-                // After rolling, wait a bit then make decisions
-                setTimeout(() => {
-                    // If bot landed on an unowned property, decide whether to buy
-                    const currentSpace = gameData.settings.board[bot.position];
-                    if (currentSpace && currentSpace.type === 'property' && !gameData.properties[bot.position].ownerId) {
-                        const canAfford = bot.money >= currentSpace.price;
-                        if (canAfford && Math.random() > 0.3) { // 70% chance to buy
-                            setTimeout(() => sendMessage({ type: 'buy_property' }), 1000);
-                        } else {
-                            // Don't buy, end turn
-                            setTimeout(() => sendMessage({ type: 'end_turn' }), 1000);
-                        }
-                    } else {
-                        // Not on a buyable property, end turn
-                        setTimeout(() => sendMessage({ type: 'end_turn' }), 1000);
-                    }
-                }, 2000);
-            }, 500);
         }
 
         // 📊 Show Player Statistics Modal
@@ -3645,11 +3513,7 @@ padding-bottom: 20;
             `;
             
             showModal(`📊 Player Statistics`, statsHTML, [
-                { text: 'Close', class: 'bg-blue-500', action: hideModal },
-                ...(playerId === localPlayer.id && player.money < 0 ? [{ text: '💥 İflas Et', class: 'bg-red-600', action: () => {
-                    hideModal();
-                    setTimeout(() => window.declareBankruptcy(), 300);
-                }}] : [])
+                { text: 'Close', class: 'bg-blue-500', action: hideModal }
             ]);
             // Add toggle logic for modal property list
             setTimeout(() => {
@@ -3982,8 +3846,37 @@ padding-bottom: 20;
             const die2 = Math.floor(Math.random() * 6) + 1;
             const total = die1 + die2;
             
-            // 🎲 Check for doubles
-            const isDouble = (die1 === die2);
+            // Show result after animation
+            setTimeout(() => {
+                dice1El.textContent = die1;
+                dice2El.textContent = die2;
+                dice1El.classList.remove('dice-rolling');
+                dice2El.classList.remove('dice-rolling');
+            }, 1000);
+            
+            const oldPosition = currentPlayer.position;
+            const newPosition = (oldPosition + total) % gameData.settings.board.length;
+            
+            let newMoney = currentPlayer.money;
+            let logMessages = [`${currentPlayer.name} rolled a ${die1} and a ${die2}, moving ${total} spaces.`];
+            
+            // Check if player passed GO
+            if (newPosition < oldPosition) {
+                let passGoBonus = gameData.settings.passGoAmount;
+                
+                // 🌟 Lucky player gets double money for first 3 turns
+                if (currentPlayer.isLucky && currentPlayer.luckyTurnsLeft > 0) {
+                    passGoBonus *= 2;
+                    logMessages.push(`⭐ ${currentPlayer.name} is the LUCKY PLAYER and receives DOUBLE GO bonus: $${passGoBonus}!`);
+                } else {
+                    logMessages.push(`${currentPlayer.name} passed GO and collected $${passGoBonus}.`);
+                }
+                
+                newMoney += passGoBonus;
+            }
+            
+            // Track doubles
+            const isDouble = die1 === die2;
             const playersCopy = JSON.parse(JSON.stringify(gameData.players));
             playersCopy[gameData.currentPlayerIndex].position = newPosition;
             playersCopy[gameData.currentPlayerIndex].money = newMoney;
@@ -4188,7 +4081,7 @@ padding-bottom: 20;
                     } else {
                         // Kartın sahibiyim veya hissem var
                         addLog('You own a share of this property.');
-                        handleAfterLanding();
+                        endTurn();
                     }
                     break;
                 case 'go_to_jail':
@@ -4202,14 +4095,8 @@ padding-bottom: 20;
                     payTax(space.amount);
                     break;
                 default:
-                    handleAfterLanding();
+                    endTurn();
             }
-        }
-        
-        // 🎲 Handle actions after landing (rent payment, property actions, etc.)
-        async function handleAfterLanding() {
-            // Always end turn after landing
-            endTurn();
         }
         
         async function buyProperty(position) {
@@ -6450,17 +6337,6 @@ padding-bottom: 20;
                 localStorage.setItem('monopolyPlayerName', playerNameInput.value);
             });
             
-            // 🔄 Check for stored game session (F5 protection)
-            const storedGameId = localStorage.getItem('monopolyCurrentGameId');
-            const storedPlayerId = localStorage.getItem('monopolyPlayerId');
-            
-            if (storedGameId && storedPlayerId) {
-                console.log('🔄 Reconnecting to previous game:', storedGameId);
-                currentGameId = storedGameId;
-                localPlayer.id = storedPlayerId;
-                // Auto-reconnect will happen after WebSocket connects
-            }
-            
             // Check URL parameters for auto-join
             const urlParams = new URLSearchParams(window.location.search);
             const autoJoinGameId = urlParams.get('gameId');
@@ -6532,7 +6408,7 @@ padding-bottom: 20;
                 });
             }
             
-            // Game link copy button event listener (desktop)
+            // Game link copy button event listener
             const copyGameLinkBtn = document.getElementById('copy-game-link-btn');
             if (copyGameLinkBtn) {
                 copyGameLinkBtn.addEventListener('click', () => {
@@ -6546,25 +6422,6 @@ padding-bottom: 20;
                             console.error('Failed to copy game link:', err);
                             copyGameLinkBtn.innerHTML = '❌';
                             setTimeout(() => { copyGameLinkBtn.innerHTML = originalText; }, 2000);
-                        });
-                    }
-                });
-            }
-            
-            // Game link copy button event listener (mobile)
-            const copyGameLinkBtnMobile = document.getElementById('copy-game-link-btn-mobile');
-            if (copyGameLinkBtnMobile) {
-                copyGameLinkBtnMobile.addEventListener('click', () => {
-                    const gameLinkInputMobile = document.getElementById('game-link-input-mobile');
-                    if (gameLinkInputMobile && gameLinkInputMobile.value) {
-                        navigator.clipboard.writeText(gameLinkInputMobile.value).then(() => {
-                            const originalText = copyGameLinkBtnMobile.innerHTML;
-                            copyGameLinkBtnMobile.innerHTML = '✅';
-                            setTimeout(() => { copyGameLinkBtnMobile.innerHTML = originalText; }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy game link:', err);
-                            copyGameLinkBtnMobile.innerHTML = '❌';
-                            setTimeout(() => { copyGameLinkBtnMobile.innerHTML = originalText; }, 2000);
                         });
                     }
                 });

@@ -2,10 +2,13 @@ const WebSocket = require('ws');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const url = require('url');
 
 // Create HTTP server to serve files
 const server = http.createServer((req, res) => {
-    let filePath = '.' + req.url;
+    // Parse URL to get path without query string
+    const parsedUrl = url.parse(req.url);
+    let filePath = '.' + parsedUrl.pathname;
     if (filePath === './') filePath = './index.html';
     
     const extname = String(path.extname(filePath)).toLowerCase();
@@ -172,6 +175,18 @@ wss.on('connection', (ws, req) => {
                 case 'get_game':
                     handleGetGame(ws, message);
                     break;
+                case 'chat_message':
+                    handleChatMessage(ws, message);
+                    break;
+                case 'list_games':
+                    handleListGames(ws, message);
+                    break;
+                case 'declare_bankruptcy':
+                    handleDeclareBankruptcy(ws, message);
+                    break;
+                case 'add_bot':
+                    handleAddBot(ws, message);
+                    break;
                 default:
                     ws.send(JSON.stringify({ type: 'error', message: 'Unknown message type' }));
             }
@@ -188,13 +203,14 @@ wss.on('connection', (ws, req) => {
 
 function handleCreateGame(ws, message) {
     const gameId = message.gameId || generateGameId();
-    const { player, settings } = message;
+    const { player, settings, private: isPrivate } = message;
     
     const newGame = {
         gameId,
         hostId: player.id,
         players: [player],
         state: 'lobby',
+        private: isPrivate || false,
         settings: {
             ...settings,
             board: settings.board || getDefaultBoard()
@@ -353,6 +369,193 @@ function handleGetGame(ws, message) {
         game
     }));
 }
+
+function handleChatMessage(ws, message) {
+    console.log('Handling chat message:', message);
+    
+    const { gameId, playerName, text } = message;
+    
+    if (!gameId || !playerName || !text) {
+        console.log('Invalid chat message data:', { gameId, playerName, text: !!text });
+        ws.send(JSON.stringify({ type: 'error', message: 'Invalid chat message data' }));
+        return;
+    }
+    
+    const game = games.get(gameId);
+    if (!game) {
+        console.log('Game not found for chat:', gameId);
+        ws.send(JSON.stringify({ type: 'error', message: 'Game not found' }));
+        return;
+    }
+    
+    // Sanitize message
+    const sanitizedText = text.trim().substring(0, 200);
+    if (!sanitizedText) {
+        console.log('Empty sanitized text');
+        return;
+    }
+    
+    const chatMessage = {
+        type: 'chat_message',
+        playerName: playerName.substring(0, 50), // Limit name length
+        text: sanitizedText,
+        timestamp: Date.now()
+    };
+    
+    console.log('Broadcasting chat message to game:', gameId);
+    // Broadcast to all players in the game
+    broadcastToGame(gameId, chatMessage);
+}
+
+function handleListGames(ws, message) {
+    const publicGames = [];
+    
+    for (const [gameId, game] of games.entries()) {
+        if (!game.private && game.state === 'lobby') {
+            publicGames.push({
+                gameId,
+                hostName: game.players[0]?.name || 'Unknown',
+                playerCount: game.players.length,
+                maxPlayers: game.settings?.maxPlayers || 4,
+                map: game.settings?.map || 'classic'
+            });
+        }
+    }
+    
+    ws.send(JSON.stringify({
+        type: 'games_list',
+        games: publicGames
+    }));
+}
+
+function handleDeclareBankruptcy(ws, message) {
+    const { playerId } = message;
+    const gameId = ws.gameId;
+    
+    if (!gameId || !games.has(gameId)) {
+        ws.send(JSON.stringify({ type: 'error', message: 'Game not found' }));
+        return;
+    }
+    
+    const game = games.get(gameId);
+    const playerIndex = game.players.findIndex(p => p.id === playerId);
+    
+    if (playerIndex === -1) {
+        ws.send(JSON.stringify({ type: 'error', message: 'Player not found' }));
+        return;
+    }
+    
+    const player = game.players[playerIndex];
+    
+    // Mark player as bankrupt
+    player.isBankrupt = true;
+    
+    // Free up all properties owned by this player
+    if (game.properties) {
+        game.properties.forEach((prop, index) => {
+            if (prop.ownerId === playerId) {
+                // Reset property ownership
+                prop.ownerId = null;
+                prop.houses = 0;
+                prop.mortgaged = false;
+                // Reset ownership shares if they exist
+                if (prop.owners) {
+                    delete prop.owners[playerId];
+                }
+            }
+        });
+    }
+    
+    // Add to game log
+    game.gameLog = game.gameLog || [];
+    game.gameLog.push(`💥 ${player.name} declared bankruptcy and left the game!`);
+    
+    // Check if game should end (only one player left)
+    const activePlayers = game.players.filter(p => !p.isBankrupt);
+    if (activePlayers.length === 1) {
+        game.state = 'finished';
+        game.winner = activePlayers[0];
+        game.gameLog.push(`🏆 ${activePlayers[0].name} wins the game!`);
+    }
+    
+    // Broadcast updated game state
+    broadcastToGame(gameId, {
+        type: 'game_updated',
+        game: game
+    });
+    
+    console.log(`💥 Player ${player.name} declared bankruptcy in game ${gameId}`);
+}
+
+function handleAddBot(ws, message) {
+    const gameId = ws.gameId;
+    
+    if (!gameId || !games.has(gameId)) {
+        ws.send(JSON.stringify({ type: 'error', message: 'Game not found' }));
+        return;
+    }
+    
+    const game = games.get(gameId);
+    
+    // Check if game is in lobby state
+    if (game.state !== 'lobby') {
+        ws.send(JSON.stringify({ type: 'error', message: 'Cannot add bot after game has started' }));
+        return;
+    }
+    
+    // Check if there's room for another player
+    if (game.players.length >= game.settings.maxPlayers) {
+        ws.send(JSON.stringify({ type: 'error', message: 'Game is full' }));
+        return;
+    }
+    
+    // Create bot player
+    const botId = `bot_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const botNames = ['Bot Alice', 'Bot Bob', 'Bot Charlie', 'Bot Diana', 'Bot Eve', 'Bot Frank'];
+    const botName = botNames[Math.floor(Math.random() * botNames.length)];
+    const botColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'];
+    const botColor = botColors[Math.floor(Math.random() * botColors.length)];
+    const botCharacters = ['dog', 'car', 'ship', 'hat', 'thimble', 'boot', 'wheelbarrow', 'iron'];
+    const botCharacter = botCharacters[Math.floor(Math.random() * botCharacters.length)];
+    
+    const botPlayer = {
+        id: botId,
+        name: botName,
+        color: botColor,
+        character: botCharacter,
+        money: game.settings.startingMoney || 1500,
+        position: 0,
+        inJail: false,
+        jailTurns: 0,
+        isBot: true,
+        connected: true
+    };
+    
+    game.players.push(botPlayer);
+    game.gameLog = game.gameLog || [];
+    game.gameLog.push(`🤖 Bot ${botName} joined the game!`);
+    
+    // Broadcast updated game state
+    broadcastToGame(gameId, {
+        type: 'game_updated',
+        game: game
+    });
+    
+    console.log(`🤖 Bot ${botName} added to game ${gameId}`);
+}
+
+// 🔄 Periodic game state synchronization
+setInterval(() => {
+    for (const [gameId, game] of games.entries()) {
+        if (game.state === 'playing') {
+            // Send periodic updates to keep clients in sync
+            broadcastToGame(gameId, {
+                type: 'game_updated',
+                game: game
+            });
+        }
+    }
+}, 30000); // Every 30 seconds
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
