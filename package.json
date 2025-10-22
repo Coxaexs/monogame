@@ -1,0 +1,26 @@
+{
+  "name": "monopoly-websocket-server",
+  "version": "1.0.0",
+  "description": "WebSocket server for multiplayer Monopoly game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build": "echo \"No build step - static files are served from project root\"",
+    "prepare:netlify": "echo \"Note: This project includes a Node WebSocket server (server.js). Netlify static hosting will only serve the static frontend. Consider using Netlify Functions, a different host that supports long-lived sockets, or deploy the server separately.\""
+  },
+  "keywords": [
+    "websocket",
+    "monopoly",
+    "multiplayer"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "localtunnel": "^2.0.2",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

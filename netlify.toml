@@ -1,0 +1,5 @@
+[build]
+  # Publish the project root (static files live in repository root)
+  publish = "."
+  # No build step required for this project — it's static HTML/CSS/JS
+  command = "echo 'No build step; static site in project root'"
