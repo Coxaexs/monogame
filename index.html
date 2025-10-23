@@ -1455,7 +1455,7 @@ padding-bottom: 20;
         <div class="flex-grow flex items-center justify-center">
                 <div id="board" class="board">
                 <div class="center-board">
-                    <h1 class="text-5xl font-bold text-gray-800 tracking-wider">BUSINESS</h1>
+                    <h1 id="board-title" class="text-5xl font-bold text-gray-800 tracking-wider">BUSINESS</h1>
                     
                     <!-- 🎲 Dice Display - Center of Board -->
                     <div id="dice-container" class="flex justify-center items-center gap-4 h-24">
@@ -2203,6 +2203,8 @@ padding-bottom: 20;
         let decidedLaterTrades = []; // Trade'ler için "decide later" takibi
         let shownTradeIds = new Set(); // Gösterilen trade ID'lerini takip et
         let turnTimer = null; // ⏰ Turn timer for auto-end turn
+        let turnStartTime = null; // ⏰ Turn start time for countdown
+        let turnUpdateInterval = null; // ⏰ Interval for updating board title
 
         // --- DEFAULT GAME DATA ---
         function getDefaultBoard() {
@@ -3400,11 +3402,30 @@ padding-bottom: 20;
              board.appendChild(piecesContainer);
         }
 
+        function updateBoardTitle() {
+            if (!gameData || !gameData.players || !turnStartTime) {
+                document.getElementById('board-title').textContent = 'BUSINESS';
+                return;
+            }
+            
+            const currentPlayer = gameData.players[gameData.currentPlayerIndex];
+            if (!currentPlayer || currentPlayer.isBot) {
+                document.getElementById('board-title').textContent = 'BUSINESS';
+                return;
+            }
+            
+            const elapsed = Math.floor((Date.now() - turnStartTime) / 1000);
+            const remaining = Math.max(0, 90 - elapsed);
+            
+            document.getElementById('board-title').textContent = `${currentPlayer.name} - ${remaining}s`;
+        }
+
         function updateGameUI() {
             updatePlayersInfo();
             updateBoardPiecesAndHouses();
             updateControls();
             updateGameLog();
+            updateBoardTitle();
             
             // ⏰ Handle turn timer for auto-end turn
             handleTurnTimer();
@@ -3419,23 +3440,45 @@ padding-bottom: 20;
             const currentPlayer = gameData.players[gameData.currentPlayerIndex];
             const isMyTurn = currentPlayer && currentPlayer.id === localPlayer.id;
             
-            // Clear existing timer
+            // Clear existing timer and interval
             if (turnTimer) {
                 clearTimeout(turnTimer);
                 turnTimer = null;
             }
+            if (turnUpdateInterval) {
+                clearInterval(turnUpdateInterval);
+                turnUpdateInterval = null;
+            }
+            turnStartTime = null;
             
             // Start timer if it's our turn and we're not a bot
             if (isMyTurn && !currentPlayer.isBot) {
                 console.log('⏰ Starting turn timer (90 seconds)');
+                turnStartTime = Date.now();
                 turnTimer = setTimeout(() => {
                     console.log('⏰ Turn timer expired, auto-ending turn');
+                    // Clear interval
+                    if (turnUpdateInterval) {
+                        clearInterval(turnUpdateInterval);
+                        turnUpdateInterval = null;
+                    }
+                    turnStartTime = null;
+                    // Reset board title
+                    document.getElementById('board-title').textContent = 'BUSINESS';
                     // Auto-end turn
                     sendMessage({
                         type: 'end_turn',
                         gameId: currentGameId
                     });
                 }, 90000); // 1.5 minutes = 90 seconds
+                
+                // Start interval to update board title every second
+                turnUpdateInterval = setInterval(() => {
+                    updateBoardTitle();
+                }, 1000);
+            } else {
+                // Not our turn or bot, reset title
+                document.getElementById('board-title').textContent = 'BUSINESS';
             }
         }
 
@@ -3512,7 +3555,6 @@ padding-bottom: 20;
         }
         
         function showGameManagementModal() {
-            const modal = document.getElementById('game-management-modal');
             const playersContainer = document.getElementById('game-management-players');
             
             playersContainer.innerHTML = gameData.players.map(p => `
