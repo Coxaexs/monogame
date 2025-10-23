@@ -6861,7 +6861,254 @@ padding-bottom: 20;
             <button id="closeManagementModal" class="w-full bg-gray-500 text-white p-2 rounded">Close</button>
         </div>
     </div>
+<script>
+// === BOT SISTEMI === //
+class Bot {
+    constructor(x, y, name = "Bot") {
+        this.x = x;
+        this.y = y;
+        this.name = name;
+        this.speed = 2;
+        this.targetX = x;
+        this.targetY = y;
+        this.health = 100;
+        this.isActive = true;
+        this.color = `hsl(${Math.random() * 360}, 70%, 50%)`;
+        this.size = 15;
+        this.isMoving = false;
+        this.moveCooldown = 0;
+    }
 
+    update(playerX, playerY) {
+        if (!this.isActive) return;
+
+        // Cooldown kontrolü
+        if (this.moveCooldown > 0) {
+            this.moveCooldown--;
+            return;
+        }
+
+        // Sadece sırası geldiğinde hareket et
+        if (!this.isMoving) return;
+
+        // Hedefe ulaştıysan dur
+        if (Math.abs(this.x - this.targetX) < 2 && Math.abs(this.y - this.targetY) < 2) {
+            this.isMoving = false;
+            this.x = this.targetX;
+            this.y = this.targetY;
+            return;
+        }
+
+        // Hedefe doğru hareket
+        let dx = this.targetX - this.x;
+        let dy = this.targetY - this.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance > 0) {
+            this.x += (dx / distance) * this.speed;
+            this.y += (dy / distance) * this.speed;
+        }
+
+        // Sınırları kontrol et
+        this.x = Math.max(this.size, Math.min(800 - this.size, this.x));
+        this.y = Math.max(this.size, Math.min(600 - this.size, this.y));
+    }
+
+    startTurn() {
+        if (!this.isActive) return;
+        
+        this.isMoving = true;
+        this.moveCooldown = 30; // Kısa bekleme
+        
+        // Akıllı hedef seç - rastgele değil
+        const possibleTargets = [
+            { x: 100, y: 100 },   // Köşeler
+            { x: 700, y: 100 },
+            { x: 100, y: 500 },
+            { x: 700, y: 500 },
+            { x: 400, y: 300 },   // Merkez
+        ];
+        
+        const target = possibleTargets[Math.floor(Math.random() * possibleTargets.length)];
+        this.targetX = target.x;
+        this.targetY = target.y;
+        
+        console.log(`${this.name} hedefe gidiyor: (${this.targetX}, ${this.targetY})`);
+    }
+
+    endTurn() {
+        this.isMoving = false;
+    }
+
+    draw(ctx) {
+        if (!this.isActive) return;
+
+        // Bot gövdesi
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Seçili botu göster
+        if (this.isMoving) {
+            ctx.strokeStyle = 'yellow';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size + 5, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // Bot gözleri
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(this.x - 5, this.y - 3, 4, 0, Math.PI * 2);
+        ctx.arc(this.x + 5, this.y - 3, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Göz bebekleri
+        ctx.fillStyle = 'black';
+        ctx.beginPath();
+        ctx.arc(this.x - 5, this.y - 3, 2, 0, Math.PI * 2);
+        ctx.arc(this.x + 5, this.y - 3, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // İsim
+        ctx.fillStyle = 'white';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.name, this.x, this.y - 25);
+        
+        // Sıra bilgisi
+        if (this.isMoving) {
+            ctx.fillStyle = 'yellow';
+            ctx.font = '10px Arial';
+            ctx.fillText('Sırası!', this.x, this.y - 40);
+        }
+    }
+}
+
+class BotManager {
+    constructor() {
+        this.bots = [];
+        this.currentBotIndex = 0;
+        this.isBotTurn = false;
+        this.turnTimer = 0;
+    }
+
+    initialize() {
+        // İsimleri değiştir
+        const botNames = ["Kivi Bot", "Lef Bot"];
+        
+        for (let i = 0; i < botNames.length; i++) {
+            const x = 200 + (i * 400); // Eşit dağılım
+            const y = 300;
+            const bot = new Bot(x, y, botNames[i]);
+            this.bots.push(bot);
+        }
+    }
+
+    update(playerX, playerY) {
+        if (!this.isBotTurn) return;
+
+        this.turnTimer++;
+        
+        // Mevcut botu güncelle
+        const currentBot = this.bots[this.currentBotIndex];
+        if (currentBot) {
+            currentBot.update(playerX, playerY);
+            
+            // Bot hareketi bitince sırayı değiştir
+            if (!currentBot.isMoving && this.turnTimer > 60) {
+                this.endCurrentTurn();
+            }
+        }
+    }
+
+    startBotTurn() {
+        if (this.bots.length === 0) return;
+        
+        this.isBotTurn = true;
+        this.turnTimer = 0;
+        
+        const currentBot = this.bots[this.currentBotIndex];
+        if (currentBot) {
+            currentBot.startTurn();
+            console.log(`🎮 ${currentBot.name} sırası!`);
+        }
+    }
+
+    endCurrentTurn() {
+        const currentBot = this.bots[this.currentBotIndex];
+        if (currentBot) {
+            currentBot.endTurn();
+        }
+        
+        this.isBotTurn = false;
+        this.currentBotIndex = (this.currentBotIndex + 1) % this.bots.length;
+        
+        console.log('🤖 Bot sırası bitti, oyuncu sırası!');
+        
+        // Oyuncu sırasına geç
+        if (window.game && window.game.player) {
+            window.game.player.canMove = true;
+        }
+    }
+
+    draw(ctx) {
+        this.bots.forEach(bot => bot.draw(ctx));
+    }
+}
+
+// === OYUN ENTEGRASYONU === //
+
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        if (window.game) {
+            // Bot manager'ı oluştur
+            window.game.botManager = new BotManager();
+            window.game.botManager.initialize();
+            
+            // Oyuncu sınıfını genişlet
+            if (window.game.player) {
+                const originalPlayerUpdate = window.game.player.update;
+                window.game.player.update = function() {
+                    originalPlayerUpdate.call(this);
+                    
+                    // Oyuncu hareketi bitince bot sırasını başlat
+                    if (this.canMove && !this.isMoving && 
+                        window.game.botManager && !window.game.botManager.isBotTurn) {
+                        this.canMove = false;
+                        setTimeout(() => {
+                            window.game.botManager.startBotTurn();
+                        }, 1000);
+                    }
+                };
+            }
+            
+            // Update fonksiyonunu genişlet
+            const originalUpdate = window.game.update;
+            window.game.update = function() {
+                originalUpdate.call(this);
+                if (this.botManager && this.player) {
+                    this.botManager.update(this.player.x, this.player.y);
+                }
+            };
+            
+            // Draw fonksiyonunu genişlet
+            const originalDraw = window.game.draw;
+            window.game.draw = function() {
+                originalDraw.call(this);
+                if (this.botManager && this.ctx) {
+                    this.botManager.draw(this.ctx);
+                }
+            };
+            
+            console.log('🤖 Düzeltilmiş bot sistemi aktif!');
+            console.log('🎮 Botlar: Kivi Bot ve Lef Bot');
+        }
+    }, 2000);
+});
+</script>
 </body>
 </html>
 
