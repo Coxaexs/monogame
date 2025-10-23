@@ -1713,25 +1713,16 @@ padding-bottom: 20;
 
             ws.onmessage = (event) => {
                 const message = JSON.parse(event.data);
-                console.log('📩 Received message type:', message.type);
-                console.log('📩 Full message:', message);
-                addDebugLog('📩 MSG: ' + message.type);
                 handleServerMessage(message);
             };
 
             ws.onclose = (event) => {
-                console.log('❌ WebSocket disconnected');
-                console.log('❌ Close code:', event.code);
-                console.log('❌ Close reason:', event.reason);
-                console.log('❌ Clean close:', event.wasClean);
-                addDebugLog('❌ WS CLOSED: ' + event.code);
                 connectionStatus = 'disconnected';
                 updateConnectionIndicator();
                 
                 if (reconnectAttempts < maxReconnectAttempts) {
                     reconnectAttempts++;
                     setTimeout(() => {
-                        console.log(`🔄 Reconnecting... (${reconnectAttempts}/${maxReconnectAttempts})`);
                         connectWebSocket();
                     }, 2000);
                 } else {
@@ -1740,11 +1731,6 @@ padding-bottom: 20;
             };
 
             ws.onerror = (error) => {
-                console.error('❌ WebSocket error occurred!');
-                console.error('❌ Error event:', error);
-                console.error('❌ WebSocket URL was:', wsUrl);
-                console.error('❌ ReadyState:', ws ? ws.readyState : 'null');
-                addDebugLog('❌ WS ERROR!');
                 connectionStatus = 'disconnected';
                 updateConnectionIndicator();
             };
@@ -1828,36 +1814,20 @@ padding-bottom: 20;
         }
 
         function sendMessage(message) {
-            console.log('📤 Attempting to send message:', message.type);
-            console.log('🔌 WebSocket state:', ws ? ws.readyState : 'null');
-            console.log('🔌 OPEN=', WebSocket.OPEN, 'CONNECTING=', WebSocket.CONNECTING, 'CLOSED=', WebSocket.CLOSED);
-            addDebugLog('📤 SEND: ' + message.type);
-            
             if (ws && ws.readyState === WebSocket.OPEN) {
-                console.log('✅ Sending message:', message);
                 ws.send(JSON.stringify(message));
-                console.log('✅ Message sent successfully');
-                addDebugLog('✅ SENT: ' + message.type);
             } else {
-                console.error('❌ WebSocket not connected. State:', ws ? ws.readyState : 'null');
-                addDebugLog('❌ WS NOT OPEN! State: ' + (ws ? ws.readyState : 'null'));
+                console.error('❌ Cannot send message - WebSocket not connected');
                 alert('Connection lost. Please wait while we reconnect...');
                 connectWebSocket();
             }
         }
 
         function handleServerMessage(message) {
-            console.log('📥 Server message:', message);
-            
             switch(message.type) {
                 case 'game_created':
                     currentGameId = message.gameId;
                     gameData = message.game;
-                    console.log('✅ Game created:', currentGameId);
-                    console.log('📋 Game settings:', gameData.settings);
-                    console.log('🗺️ Map:', gameData.settings.map);
-                    console.log('📍 Board length:', gameData.settings.board.length);
-                    console.log('📍 First property:', gameData.settings.board[1]?.name);
                     
                     // 🔄 Save session to localStorage for F5 protection
                     localStorage.setItem('monopolyCurrentGameId', currentGameId);
@@ -1875,8 +1845,6 @@ padding-bottom: 20;
                 case 'game_joined':
                     currentGameId = message.gameId;
                     gameData = message.game;
-                    console.log('✅ Joined game:', currentGameId);
-                    console.log('👥 Players in game:', gameData.players.map(p => p.name));
                     
                     // 🔄 Save session to localStorage for F5 protection
                     localStorage.setItem('monopolyCurrentGameId', currentGameId);
@@ -1926,11 +1894,6 @@ padding-bottom: 20;
                         }
                     } else if (gameData.state === 'playing') {
                         if (gameContainer.classList.contains('hidden')) {
-                            console.log('✅ State changed to playing, showing game...');
-                            console.log('🗺️ Active map:', gameData.settings.map);
-                            console.log('📍 Board spaces:', gameData.settings.board.length);
-                            console.log('📍 Property at position 1:', gameData.settings.board[1]?.name);
-                            console.log('📍 Property at position 11:', gameData.settings.board[11]?.name);
                             showGame();
                             setTimeout(() => {
                                 renderBoard();
@@ -1963,6 +1926,25 @@ padding-bottom: 20;
                             // Start timer if auction just started
                             if (auctionChanged && !auctionTimerInterval) {
                                 auctionTimerInterval = setInterval(updateAuctionTimer, 1000);
+                            }
+                            
+                            // Bot auction bidding logic
+                            if (auctionChanged && gameData.players[gameData.currentPlayerIndex].isBot && 
+                                gameData.auction.playersInAuction.includes(gameData.players[gameData.currentPlayerIndex].id)) {
+                                // Bot should bid if current bid is less than property price
+                                const space = gameData.settings.board[gameData.auction.position];
+                                const currentBid = gameData.auction.currentBid;
+                                const botPlayer = gameData.players[gameData.currentPlayerIndex];
+                                
+                                if (currentBid < space.price && botPlayer.money > currentBid + 10) {
+                                    // Bot bids up to the original price
+                                    const bidAmount = Math.min(currentBid + Math.floor(Math.random() * 20) + 10, space.price, botPlayer.money - 1);
+                                    if (bidAmount > currentBid) {
+                                        setTimeout(() => {
+                                            placeBid(bidAmount);
+                                        }, 1000 + Math.random() * 1000); // Random delay 1-2 seconds
+                                    }
+                                }
                             }
                             
                             if (auctionChanged && gameData.auction.playersInAuction.includes(localPlayer.id)) {
@@ -3510,7 +3492,7 @@ padding-bottom: 20;
                             ${p.inJail ? `<div class="text-red-500 font-bold text-sm flex items-center gap-1">🔒 IN JAIL</div>` : '<div></div>'}
                             <div class="flex gap-2">
                                 ${p.id === localPlayer.id && p.money < 0 ? `<button onclick="window.declareBankruptcy()" class="text-xs bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1 rounded-lg hover:from-red-600 hover:to-red-700 shadow transition-all">💥 İflas Et</button>` : ''}
-                                ${p.id !== localPlayer.id && gameData.settings.allowTrading && !p.isBot ? `<button data-player-id="${p.id}" onclick="window.showTradeModal('${p.id}')" class="trade-btn text-xs bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-lg hover:from-blue-600 hover:to-blue-700 shadow transition-all">🤝 Trade</button>` : ''}
+                                ${p.id !== localPlayer.id && gameData.settings.allowTrading ? `<button data-player-id="${p.id}" onclick="window.showTradeModal('${p.id}')" class="trade-btn text-xs bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-lg hover:from-blue-600 hover:to-blue-700 shadow transition-all">🤝 Trade</button>` : ''}
                                 ${p.id === gameData.hostId && localPlayer.id === gameData.hostId ? `<button onclick="showGameManagementModal()" class="text-xs bg-gradient-to-r from-purple-500 to-purple-600 text-white px-3 py-1 rounded-lg hover:from-purple-600 hover:to-purple-700 shadow transition-all">🎮 Oyun Yönetimi</button>` : ''}
                             </div>
                         </div>
@@ -4295,6 +4277,13 @@ padding-bottom: 20;
             // Calculate final decision score
             const finalScore = (valueScore * 0.4) + (affordabilityScore * 0.5) + (monopolyBonus * 0.1);
             
+            // Special rule: If bot has 3x the property price, buy immediately
+            if (moneyRatio >= 3) {
+                addLog(`🤖 ${currentPlayer.name} has plenty of money ($${currentPlayer.money}) and decided to buy ${space.name} for $${space.price}.`);
+                await buyPropertyWithShare(position, 100);
+                return;
+            }
+            
             // Decision thresholds
             if (finalScore >= 70) {
                 // Buy 100% if very valuable and affordable
@@ -4766,29 +4755,21 @@ padding-bottom: 20;
         
         // 📬 Check for Partnership Requests
         function checkPartnershipRequests() {
-            console.log('🔍 Checking partnership requests for player:', localPlayer.id, 'isBot:', localPlayer.isBot);
             if (!gameData || !gameData.partnershipRequests) return;
             
             const myRequests = gameData.partnershipRequests.filter(req => 
                 req.partnerId === localPlayer.id && req.status === 'pending'
             );
             
-            console.log('📋 My partnership requests:', myRequests.length);
-            
             if (myRequests.length > 0) {
                 const latestRequest = myRequests[myRequests.length - 1];
-                console.log('🎯 Latest request:', latestRequest);
                 
                 // Check if the current player (who might be receiving this request) is a bot
                 const currentPlayer = gameData.players[gameData.currentPlayerIndex];
-                console.log('👤 Current player:', currentPlayer.name, 'isBot:', currentPlayer.isBot, 'localPlayer:', localPlayer.id);
-                
                 if (currentPlayer && currentPlayer.id === localPlayer.id && currentPlayer.isBot) {
-                    console.log('🤖 Bot deciding on partnership...');
                     // Bot automatically decides on partnership
                     botDecidePartnership(latestRequest);
                 } else {
-                    console.log('👨 Human player, showing modal...');
                     // Show modal for human players
                     showPartnershipRequestModal(latestRequest);
                 }
@@ -4797,7 +4778,6 @@ padding-bottom: 20;
         
         // 🤖 Bot Partnership Decision
         async function botDecidePartnership(request) {
-            console.log('🤖 Bot deciding on partnership request:', request);
             // Bot thinks for 2 seconds before deciding
             await new Promise(resolve => setTimeout(resolve, 2000));
             
@@ -5000,22 +4980,23 @@ padding-bottom: 20;
             
             // Value difference (positive if bot gains value)
             const valueDiff = botReceivingValue - botGivingValue;
-            score += valueDiff * 0.5;
             
-            // Financial advantage (prefer if bot is wealthier)
-            if (botMoneyRatio > 0.6) score += 20; // Bot is rich, can be generous
-            else if (botMoneyRatio < 0.4) score -= 20; // Bot is poor, be conservative
+            // New trade logic: Check if trade is favorable
+            const isFavorableTrade = valueDiff >= (botGivingValue * 0.5); // 1.5x value or more
             
-            // Random factor for unpredictability
-            score += (Math.random() - 0.5) * 40;
-            
-            if (score >= 30) {
-                // Accept trade
-                addLog(`🤖 ${toPlayer.name} accepted trade with ${fromPlayer.name}.`);
-                acceptTrade(trade.id);
+            if (isFavorableTrade) {
+                // 70% chance to accept, 30% chance to decline
+                const acceptChance = Math.random() < 0.7;
+                if (acceptChance) {
+                    addLog(`🤖 ${toPlayer.name} accepted favorable trade with ${fromPlayer.name} (receiving ${valueDiff} more value).`);
+                    acceptTrade(trade.id);
+                } else {
+                    addLog(`🤖 ${toPlayer.name} declined favorable trade with ${fromPlayer.name} despite good value.`);
+                    declineTrade(trade.id);
+                }
             } else {
-                // Decline trade
-                addLog(`🤖 ${toPlayer.name} declined trade with ${fromPlayer.name}.`);
+                // Unfavorable trade - always decline
+                addLog(`🤖 ${toPlayer.name} declined unfavorable trade with ${fromPlayer.name} (losing ${Math.abs(valueDiff)} value).`);
                 declineTrade(trade.id);
             }
         }
