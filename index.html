@@ -6921,6 +6921,471 @@ padding-bottom: 20;
         init();
 
     </script>
+    <!-- ==================== -->
+<!-- BOT SISTEMI - BU KODU </body> ETİKETİNDEN ÖNCE EKLE -->
+<!-- ==================== -->
+<script>
+// === BOT SISTEMI === //
+class Bot {
+    constructor(x, y, name = "Bot") {
+        this.x = x;
+        this.y = y;
+        this.name = name;
+        this.speed = 2;
+        this.targetX = x;
+        this.targetY = y;
+        this.health = 100;
+        this.isActive = true;
+        this.color = `hsl(${Math.random() * 360}, 70%, 50%)`;
+        this.size = 15;
+    }
+
+    update(playerX, playerY) {
+        if (!this.isActive) return;
+
+        // Oyuncuya yakınsa kaç
+        const dxToPlayer = playerX - this.x;
+        const dyToPlayer = playerY - this.y;
+        const distanceToPlayer = Math.sqrt(dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer);
+
+        if (distanceToPlayer < 100) {
+            // Oyuncudan uzaklaş
+            this.targetX = this.x - dxToPlayer;
+            this.targetY = this.y - dyToPlayer;
+        } else if (Math.abs(this.x - this.targetX) < 10 && Math.abs(this.y - this.targetY) < 10) {
+            // Rastgele hedefe git
+            this.findNewTarget();
+        }
+
+        // Hedefe doğru hareket
+        let dx = this.targetX - this.x;
+        let dy = this.targetY - this.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance > 0) {
+            this.x += (dx / distance) * this.speed;
+            this.y += (dy / distance) * this.speed;
+        }
+
+        // Sınırları kontrol et
+        this.x = Math.max(this.size, Math.min(800 - this.size, this.x));
+        this.y = Math.max(this.size, Math.min(600 - this.size, this.y));
+    }
+
+    findNewTarget() {
+        this.targetX = this.x + (Math.random() - 0.5) * 200;
+        this.targetY = this.y + (Math.random() - 0.5) * 200;
+        
+        // Sınırları kontrol et
+        this.targetX = Math.max(50, Math.min(750, this.targetX));
+        this.targetY = Math.max(50, Math.min(550, this.targetY));
+    }
+
+    draw(ctx) {
+        if (!this.isActive) return;
+
+        // Bot gövdesi
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bot gözleri
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(this.x - 5, this.y - 3, 4, 0, Math.PI * 2);
+        ctx.arc(this.x + 5, this.y - 3, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Göz bebekleri
+        ctx.fillStyle = 'black';
+        ctx.beginPath();
+        ctx.arc(this.x - 5, this.y - 3, 2, 0, Math.PI * 2);
+        ctx.arc(this.x + 5, this.y - 3, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // İsim
+        ctx.fillStyle = 'white';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.name, this.x, this.y - 25);
+    }
+}
+
+class BotManager {
+    constructor() {
+        this.bots = [];
+        this.maxBots = 5;
+    }
+
+    initialize() {
+        for (let i = 0; i < this.maxBots; i++) {
+            this.spawnBot();
+        }
+    }
+
+    spawnBot() {
+        const x = Math.random() * 600 + 100;
+        const y = Math.random() * 400 + 100;
+        const bot = new Bot(x, y, `Bot${this.bots.length + 1}`);
+        this.bots.push(bot);
+    }
+
+    update(playerX, playerY) {
+        this.bots.forEach(bot => {
+            if (bot.isActive) {
+                bot.update(playerX, playerY);
+            }
+        });
+    }
+
+    draw(ctx) {
+        this.bots.forEach(bot => bot.draw(ctx));
+    }
+}
+
+// === MEVCUT OYUNA BOT SISTEMINI EKLE === //
+
+// Oyun başladığında botları initialize et
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        if (window.game) {
+            window.game.botManager = new BotManager();
+            window.game.botManager.initialize();
+            
+            // Update fonksiyonunu genişlet
+            const originalUpdate = window.game.update;
+            window.game.update = function() {
+                originalUpdate();
+                if (this.botManager && this.player) {
+                    this.botManager.update(this.player.x, this.player.y);
+                }
+            };
+            
+            // Draw fonksiyonunu genişlet
+            const originalDraw = window.game.draw;
+            window.game.draw = function() {
+                originalDraw();
+                if (this.botManager && this.ctx) {
+                    this.botManager.draw(this.ctx);
+                }
+            };
+            
+            console.log('🤖 Bot sistemi aktif!');
+        }
+    }, 1000);
+});
+</script>
+<!-- ==================== -->
+<!-- BOT SISTEMI SONU -->
+<!-- ==================== -->
+    <!-- ==================== -->
+<!-- BOT SISTEMI - BU KODU </body> ETİKETİNDEN ÖNCE EKLE -->
+<!-- ==================== -->
+<script>
+// === BOT SISTEMI === //
+class Bot {
+    constructor(x, y, name = "Bot") {
+        this.x = x;
+        this.y = y;
+        this.name = name;
+        this.speed = 2;
+        this.targetX = x;
+        this.targetY = y;
+        this.health = 100;
+        this.isActive = true;
+        this.color = `hsl(${Math.random() * 360}, 70%, 50%)`;
+        this.size = 15;
+    }
+
+    update(playerX, playerY) {
+        if (!this.isActive) return;
+
+        // Oyuncuya yakınsa kaç
+        const dxToPlayer = playerX - this.x;
+        const dyToPlayer = playerY - this.y;
+        const distanceToPlayer = Math.sqrt(dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer);
+
+        if (distanceToPlayer < 100) {
+            // Oyuncudan uzaklaş
+            this.targetX = this.x - dxToPlayer;
+            this.targetY = this.y - dyToPlayer;
+        } else if (Math.abs(this.x - this.targetX) < 10 && Math.abs(this.y - this.targetY) < 10) {
+            // Rastgele hedefe git
+            this.findNewTarget();
+        }
+
+        // Hedefe doğru hareket
+        let dx = this.targetX - this.x;
+        let dy = this.targetY - this.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance > 0) {
+            this.x += (dx / distance) * this.speed;
+            this.y += (dy / distance) * this.speed;
+        }
+
+        // Sınırları kontrol et
+        this.x = Math.max(this.size, Math.min(800 - this.size, this.x));
+        this.y = Math.max(this.size, Math.min(600 - this.size, this.y));
+    }
+
+    findNewTarget() {
+        this.targetX = this.x + (Math.random() - 0.5) * 200;
+        this.targetY = this.y + (Math.random() - 0.5) * 200;
+        
+        // Sınırları kontrol et
+        this.targetX = Math.max(50, Math.min(750, this.targetX));
+        this.targetY = Math.max(50, Math.min(550, this.targetY));
+    }
+
+    draw(ctx) {
+        if (!this.isActive) return;
+
+        // Bot gövdesi
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bot gözleri
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(this.x - 5, this.y - 3, 4, 0, Math.PI * 2);
+        ctx.arc(this.x + 5, this.y - 3, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Göz bebekleri
+        ctx.fillStyle = 'black';
+        ctx.beginPath();
+        ctx.arc(this.x - 5, this.y - 3, 2, 0, Math.PI * 2);
+        ctx.arc(this.x + 5, this.y - 3, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // İsim
+        ctx.fillStyle = 'white';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.name, this.x, this.y - 25);
+    }
+}
+
+class BotManager {
+    constructor() {
+        this.bots = [];
+        this.maxBots = 5;
+    }
+
+    initialize() {
+        for (let i = 0; i < this.maxBots; i++) {
+            this.spawnBot();
+        }
+    }
+
+    spawnBot() {
+        const x = Math.random() * 600 + 100;
+        const y = Math.random() * 400 + 100;
+        const bot = new Bot(x, y, `Bot${this.bots.length + 1}`);
+        this.bots.push(bot);
+    }
+
+    update(playerX, playerY) {
+        this.bots.forEach(bot => {
+            if (bot.isActive) {
+                bot.update(playerX, playerY);
+            }
+        });
+    }
+
+    draw(ctx) {
+        this.bots.forEach(bot => bot.draw(ctx));
+    }
+}
+
+// === MEVCUT OYUNA BOT SISTEMINI EKLE === //
+
+// Oyun başladığında botları initialize et
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        if (window.game) {
+            window.game.botManager = new BotManager();
+            window.game.botManager.initialize();
+            
+            // Update fonksiyonunu genişlet
+            const originalUpdate = window.game.update;
+            window.game.update = function() {
+                originalUpdate();
+                if (this.botManager && this.player) {
+                    this.botManager.update(this.player.x, this.player.y);
+                }
+            };
+            
+            // Draw fonksiyonunu genişlet
+            const originalDraw = window.game.draw;
+            window.game.draw = function() {
+                originalDraw();
+                if (this.botManager && this.ctx) {
+                    this.botManager.draw(this.ctx);
+                }
+            };
+            
+            console.log('🤖 Bot sistemi aktif!');
+        }
+    }, 1000);
+});
+</script>
+<script>
+// === BOT SISTEMI === //
+class Bot {
+    constructor(x, y, name = "Bot") {
+        this.x = x;
+        this.y = y;
+        this.name = name;
+        this.speed = 2;
+        this.targetX = x;
+        this.targetY = y;
+        this.health = 100;
+        this.isActive = true;
+        this.color = `hsl(${Math.random() * 360}, 70%, 50%)`;
+        this.size = 15;
+    }
+
+    update(playerX, playerY) {
+        if (!this.isActive) return;
+
+        // Oyuncuya yakınsa kaç
+        const dxToPlayer = playerX - this.x;
+        const dyToPlayer = playerY - this.y;
+        const distanceToPlayer = Math.sqrt(dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer);
+
+        if (distanceToPlayer < 100) {
+            // Oyuncudan uzaklaş
+            this.targetX = this.x - dxToPlayer;
+            this.targetY = this.y - dyToPlayer;
+        } else if (Math.abs(this.x - this.targetX) < 10 && Math.abs(this.y - this.targetY) < 10) {
+            // Rastgele hedefe git
+            this.findNewTarget();
+        }
+
+        // Hedefe doğru hareket
+        let dx = this.targetX - this.x;
+        let dy = this.targetY - this.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance > 0) {
+            this.x += (dx / distance) * this.speed;
+            this.y += (dy / distance) * this.speed;
+        }
+
+        // Sınırları kontrol et
+        this.x = Math.max(this.size, Math.min(800 - this.size, this.x));
+        this.y = Math.max(this.size, Math.min(600 - this.size, this.y));
+    }
+
+    findNewTarget() {
+        this.targetX = this.x + (Math.random() - 0.5) * 200;
+        this.targetY = this.y + (Math.random() - 0.5) * 200;
+        
+        // Sınırları kontrol et
+        this.targetX = Math.max(50, Math.min(750, this.targetX));
+        this.targetY = Math.max(50, Math.min(550, this.targetY));
+    }
+
+    draw(ctx) {
+        if (!this.isActive) return;
+
+        // Bot gövdesi
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bot gözleri
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(this.x - 5, this.y - 3, 4, 0, Math.PI * 2);
+        ctx.arc(this.x + 5, this.y - 3, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Göz bebekleri
+        ctx.fillStyle = 'black';
+        ctx.beginPath();
+        ctx.arc(this.x - 5, this.y - 3, 2, 0, Math.PI * 2);
+        ctx.arc(this.x + 5, this.y - 3, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // İsim
+        ctx.fillStyle = 'white';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.name, this.x, this.y - 25);
+    }
+}
+
+class BotManager {
+    constructor() {
+        this.bots = [];
+        this.maxBots = 5;
+    }
+
+    initialize() {
+        for (let i = 0; i < this.maxBots; i++) {
+            this.spawnBot();
+        }
+    }
+
+    spawnBot() {
+        const x = Math.random() * 600 + 100;
+        const y = Math.random() * 400 + 100;
+        const bot = new Bot(x, y, `Bot${this.bots.length + 1}`);
+        this.bots.push(bot);
+    }
+
+    update(playerX, playerY) {
+        this.bots.forEach(bot => {
+            if (bot.isActive) {
+                bot.update(playerX, playerY);
+            }
+        });
+    }
+
+    draw(ctx) {
+        this.bots.forEach(bot => bot.draw(ctx));
+    }
+}
+
+// === MEVCUT OYUNA BOT SISTEMINI EKLE === //
+
+// Oyun başladığında botları initialize et
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        if (window.game) {
+            window.game.botManager = new BotManager();
+            window.game.botManager.initialize();
+            
+            // Update fonksiyonunu genişlet
+            const originalUpdate = window.game.update;
+            window.game.update = function() {
+                originalUpdate();
+                if (this.botManager && this.player) {
+                    this.botManager.update(this.player.x, this.player.y);
+                }
+            };
+            
+            // Draw fonksiyonunu genişlet
+            const originalDraw = window.game.draw;
+            window.game.draw = function() {
+                originalDraw();
+                if (this.botManager && this.ctx) {
+                    this.botManager.draw(this.ctx);
+                }
+            };
+            
+            console.log('🤖 Bot sistemi aktif!');
+        }
+    }, 1000);
+});
+</script>
 </body>
 </html>
 
