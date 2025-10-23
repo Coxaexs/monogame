@@ -51,7 +51,7 @@
         
         body {
             font-family: 'Poppins', sans-serif;
-            overflow: hidden;
+            overflow-y: auto;
             background: linear-gradient(135deg, #1a5f3f 0%, #2d8659 50%, #1a5f3f 100%);
             background-attachment: fixed;
         }
@@ -1311,6 +1311,12 @@ padding-bottom: 20;
                 <span class="text-sm font-medium text-gray-700">Allow Player Trading</span>
             </label>
         </div>
+        <div class="mb-6">
+            <label class="flex items-center">
+                <input type="checkbox" id="allowDoubles" class="mr-2">
+                <span class="text-sm font-medium text-gray-700">Allow Doubles Rule (Extra turn on doubles)</span>
+            </label>
+        </div>
         <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Map <span id="map-preview" class="text-xs text-blue-600 font-semibold ml-2"></span></label>
@@ -1501,6 +1507,17 @@ padding-bottom: 20;
                     
                     <button id="property-buy-close" class="mt-4 bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 font-bold">Close</button>
                 </div>
+            </div>
+        </div>
+        
+        <!-- Game Management Modal -->
+        <div id="game-management-modal" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 z-40 max-w-lg w-full border-4 border-purple-500">
+            <div class="text-center">
+                <h3 class="text-2xl font-bold mb-4 text-purple-700">🎮 Game Management</h3>
+                <div id="game-management-players" class="space-y-3 max-h-64 overflow-y-auto">
+                    <!-- Players will be added here -->
+                </div>
+                <button onclick="hideGameManagementModal()" class="mt-4 bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 font-bold">Close</button>
             </div>
         </div>
     </div>
@@ -3004,6 +3021,7 @@ padding-bottom: 20;
                 passGoAmount: parseInt(document.getElementById('passGoAmount').value),
                 maxPlayers: parseInt(document.getElementById('playerCount').value),
                 allowTrading: document.getElementById('allowTrading').checked,
+                allowDoubles: document.getElementById('allowDoubles').checked,
                 board: gameData.settings.board, // Use the board that was set during game creation
                 map: gameData.settings.map, // Preserve the map selection
                 chanceCards: defaultCards.chance, 
@@ -3486,6 +3504,7 @@ padding-bottom: 20;
                             <div class="flex gap-2">
                                 ${p.id === localPlayer.id && p.money < 0 ? `<button onclick="window.declareBankruptcy()" class="text-xs bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1 rounded-lg hover:from-red-600 hover:to-red-700 shadow transition-all">💥 İflas Et</button>` : ''}
                                 ${p.id !== localPlayer.id && gameData.settings.allowTrading ? `<button data-player-id="${p.id}" onclick="window.showTradeModal('${p.id}')" class="trade-btn text-xs bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-lg hover:from-blue-600 hover:to-blue-700 shadow transition-all">🤝 Trade</button>` : ''}
+                                ${p.id === gameData.hostId && localPlayer.id === gameData.hostId ? `<button onclick="showGameManagementModal()" class="text-xs bg-gradient-to-r from-purple-500 to-purple-600 text-white px-3 py-1 rounded-lg hover:from-purple-600 hover:to-purple-700 shadow transition-all">🎮 Oyun Yönetimi</button>` : ''}
                             </div>
                         </div>
                     </div>
@@ -3501,6 +3520,64 @@ padding-bottom: 20;
                     }
                 }
             });
+        }
+        
+        function showGameManagementModal() {
+            const modal = document.getElementById('game-management-modal');
+            const playersContainer = document.getElementById('game-management-players');
+            
+            playersContainer.innerHTML = gameData.players.map(p => `
+                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full" style="background: ${p.color}"></div>
+                        <span class="font-bold">${p.name}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="kickPlayer('${p.id}')" class="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Kick</button>
+                        <button onclick="forceEndTurn('${p.id}')" class="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Force End Turn</button>
+                        <button onclick="forceRollDice('${p.id}')" class="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Force Roll</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            modal.classList.remove('hidden');
+        }
+        
+        function hideGameManagementModal() {
+            document.getElementById('game-management-modal').classList.add('hidden');
+        }
+        
+        async function kickPlayer(playerId) {
+            if (!confirm('Are you sure you want to kick this player?')) return;
+            
+            const playersCopy = gameData.players.filter(p => p.id !== playerId);
+            await updateGame({ players: playersCopy });
+            hideGameManagementModal();
+            addLog(`Player ${gameData.players.find(p => p.id === playerId).name} was kicked by the host.`);
+        }
+        
+        async function forceEndTurn(playerId) {
+            if (gameData.players[gameData.currentPlayerIndex].id !== playerId) {
+                alert('This player is not currently taking their turn.');
+                return;
+            }
+            
+            await endTurn();
+            hideGameManagementModal();
+            addLog(`Host forced ${gameData.players.find(p => p.id === playerId).name} to end their turn.`);
+        }
+        
+        async function forceRollDice(playerId) {
+            if (gameData.players[gameData.currentPlayerIndex].id !== playerId) {
+                alert('This player is not currently taking their turn.');
+                return;
+            }
+            
+            // Simulate roll dice
+            const rollDiceBtn = document.getElementById('rollDiceBtn');
+            rollDiceBtn.click();
+            hideGameManagementModal();
+            addLog(`Host forced ${gameData.players.find(p => p.id === playerId).name} to roll the dice.`);
         };
             
             // Add click event to show player stats
@@ -3897,6 +3974,19 @@ padding-bottom: 20;
                     card.appendChild(tradeBtn);
                 }
                 
+                // Host management butonu (host ise ve kendisi hariç)
+                if (localPlayer.id === gameData.players[0].id && player.id !== localPlayer.id) {
+                    console.log('Adding manage button for player:', player.id);
+                    const manageBtn = document.createElement('button');
+                    manageBtn.textContent = '⚙️';
+                    manageBtn.style.cssText = 'margin-top: 0.25rem; margin-left: 0.25rem; padding: 0.25rem 0.5rem; background: #ff6b35; color: white; border: none; border-radius: 4px; font-size: 0.8rem; cursor: pointer;';
+                    manageBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        showGameManagementModal(player.id);
+                    };
+                    card.appendChild(manageBtn);
+                }
+                
                 if (player.isBankrupt) {
                     card.style.opacity = '0.5';
                     card.style.textDecoration = 'line-through';
@@ -3978,9 +4068,13 @@ padding-bottom: 20;
             // 🎵 Play dice roll sound
             playSound('dice');
 
+            let logMessages = [];
+
             const die1 = Math.floor(Math.random() * 6) + 1;
             const die2 = Math.floor(Math.random() * 6) + 1;
             const total = die1 + die2;
+            const newPosition = (currentPlayer.position + total) % 40;
+            const newMoney = currentPlayer.money;
             
             // 🎲 Check for doubles
             const isDouble = (die1 === die2);
@@ -3999,7 +4093,9 @@ padding-bottom: 20;
             
             if (isDouble) {
                 playersCopy[gameData.currentPlayerIndex].doublesCount = (currentPlayer.doublesCount || 0) + 1;
-                logMessages.push(`🎲 ${currentPlayer.name} rolled DOUBLES!`);
+                logMessages.push(`🎲 ${currentPlayer.name} rolled ${die1} + ${die2} = ${total} (DOUBLES!)`);
+            } else {
+                logMessages.push(`🎲 ${currentPlayer.name} rolled ${die1} + ${die2} = ${total}`);
             }
             
             await updateGame({
@@ -4012,6 +4108,11 @@ padding-bottom: 20;
             setTimeout(() => {
                 handleLanding(newPosition);
             }, 1500);
+            
+            // Re-enable dice button after animation
+            setTimeout(() => {
+                rollDiceBtn.disabled = false;
+            }, 2000);
         });
         
         // 3D Dice Animation Function
@@ -4095,6 +4196,69 @@ padding-bottom: 20;
             ]);
         }
         
+        function showGameManagementModal(playerId) {
+            console.log('playerId:', playerId);
+            const player = gameData.players.find(p => p.id === playerId);
+            console.log('player:', player);
+            if (!player) {
+                console.error('Player not found for id:', playerId);
+                return;
+            }
+            document.getElementById('managementPlayerName').textContent = `Manage ${player.name}`;
+            document.getElementById('gameManagementModal').classList.remove('hidden');
+            
+            document.getElementById('kickPlayerBtn').onclick = () => {
+                socket.emit('kickPlayer', { playerId });
+                document.getElementById('gameManagementModal').classList.add('hidden');
+            };
+            
+            document.getElementById('forceEndTurnBtn').onclick = () => {
+                socket.emit('forceEndTurn', { playerId });
+                document.getElementById('gameManagementModal').classList.add('hidden');
+            };
+            
+            document.getElementById('forceRollDiceBtn').onclick = () => {
+                socket.emit('forceRollDice', { playerId });
+                document.getElementById('gameManagementModal').classList.add('hidden');
+            };
+            
+            document.getElementById('closeManagementModal').onclick = () => {
+                document.getElementById('gameManagementModal').classList.add('hidden');
+            };
+        }
+        
+        async function handleLanding(position) {
+            const currentPlayer = gameData.players[gameData.currentPlayerIndex];
+            const space = gameData.board[position];
+            
+            let logMessages = [];
+            
+            // Log landing
+            logMessages.push(`🏠 ${currentPlayer.name} landed on ${space.name}`);
+            
+            // Handle different space types
+            if (space.type === 'property') {
+                // Property logic - rent, buy, etc.
+                // For now, just log
+                logMessages.push(`This is a property: ${space.name}`);
+            } else if (space.type === 'special') {
+                // Special spaces like GO, Jail, etc.
+                if (space.name === 'Go') {
+                    // Pass GO logic
+                    logMessages.push(`Passed GO! Collect $200`);
+                } else if (space.name === 'Jail') {
+                    // Jail logic
+                    logMessages.push(`Just visiting Jail`);
+                }
+            }
+            
+            // Update turn state to landed
+            await updateGame({
+                turnState: 'landed',
+                gameLog: [...gameData.gameLog, ...logMessages]
+            });
+        }
+        
         window.joinTeam = async function(teamName) {
             const playersCopy = JSON.parse(JSON.stringify(gameData.players));
             const myIndex = playersCopy.findIndex(p => p.id === localPlayer.id);
@@ -4127,14 +4291,23 @@ padding-bottom: 20;
         endTurnBtn.addEventListener('click', async () => {
             let nextPlayerIndex = (gameData.currentPlayerIndex + 1) % gameData.players.length;
             
-            // Skip bankrupt players
-            while(gameData.players[nextPlayerIndex].isBankrupt) {
-                nextPlayerIndex = (nextPlayerIndex + 1) % gameData.players.length;
+            const playersCopy = JSON.parse(JSON.stringify(gameData.players));
+            
+            // Check for extra turn from doubles (only if doubles rule is enabled)
+            if (gameData.allowDoubles && gameData.players[gameData.currentPlayerIndex].doublesCount > 0) {
+                nextPlayerIndex = gameData.currentPlayerIndex;
+                playersCopy[gameData.currentPlayerIndex].doublesCount = 0;
+            } else {
+                // Skip bankrupt players
+                while(gameData.players[nextPlayerIndex].isBankrupt) {
+                    nextPlayerIndex = (nextPlayerIndex + 1) % gameData.players.length;
+                }
             }
             
             // Reset doubles count when moving to next player
-            const playersCopy = JSON.parse(JSON.stringify(gameData.players));
-            playersCopy[gameData.currentPlayerIndex].doublesCount = 0;
+            if (nextPlayerIndex !== gameData.currentPlayerIndex) {
+                playersCopy[gameData.currentPlayerIndex].doublesCount = 0;
+            }
             
             // ⏭️ Check if next player should skip their turn (from Skip Joker Card)
             if (playersCopy[nextPlayerIndex].skipNextTurn) {
@@ -4208,8 +4381,7 @@ padding-bottom: 20;
         
         // 🎲 Handle actions after landing (rent payment, property actions, etc.)
         async function handleAfterLanding() {
-            // Always end turn after landing
-            endTurn();
+            // Turn does not end automatically, player must click End Turn manually
         }
         
         async function buyProperty(position) {
@@ -5021,7 +5193,7 @@ padding-bottom: 20;
             }
             
             // 🎲 Check for doubles rule - allow another roll
-            if (isDouble && doublesCount > 0 && doublesCount < 3) {
+            if (isDouble && doublesCount > 0 && doublesCount < 3 && gameData.settings.allowDoubles) {
                 // Allow another roll!
                 await updateGame({ 
                     turnState: 'start',
@@ -6577,6 +6749,19 @@ padding-bottom: 20;
         init();
 
     </script>
+
+    <!-- Game Management Modal -->
+    <div id="gameManagementModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+            <h3 class="text-lg font-bold mb-4">Game Management</h3>
+            <p id="managementPlayerName" class="mb-4"></p>
+            <button id="kickPlayerBtn" class="w-full bg-red-500 text-white p-2 rounded mb-2">Kick Player</button>
+            <button id="forceEndTurnBtn" class="w-full bg-yellow-500 text-white p-2 rounded mb-2">Force End Turn</button>
+            <button id="forceRollDiceBtn" class="w-full bg-blue-500 text-white p-2 rounded mb-4">Force Roll Dice</button>
+            <button id="closeManagementModal" class="w-full bg-gray-500 text-white p-2 rounded">Close</button>
+        </div>
+    </div>
+
 </body>
 </html>
 
