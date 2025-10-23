@@ -7213,8 +7213,12 @@ padding-bottom: 20;
 <!-- TAM ENTEGRE BOT SİSTEMİ -->
 <!-- ==================== -->
 <script>
-// === TAM ENTEGRE BOT SİSTEMİ === //
-class RealGameBot {
+<!-- ==================== -->
+<!-- AUCTION & TRADE FIX BOT SİSTEMİ -->
+<!-- ==================== -->
+<script>
+// === GELİŞMİŞ BOT SİSTEMİ === //
+class AdvancedGameBot {
     constructor(x, y, name = "Bot") {
         this.x = x;
         this.y = y;
@@ -7228,18 +7232,23 @@ class RealGameBot {
         this.isMoving = false;
         this.moveCooldown = 0;
 
-        // Gerçek oyun ekonomisi
+        // Ekonomi
         this.money = name === "Kivi Bot" ? 12000 : 8000;
         this.properties = [];
         this.id = 'bot_' + Math.random().toString(36).substr(2, 9);
         this.isPlayer = false;
 
-        // Bot kişiliği
+        // Gelişmiş kişilik
         this.personality = {
-            aggression: name === "Kivi Bot" ? 0.8 : 0.4, // Saldırganlık
-            caution: name === "Kivi Bot" ? 0.2 : 0.6,    // İhtiyat
-            greed: name === "Kivi Bot" ? 0.9 : 0.5       // Açgözlülük
+            aggression: name === "Kivi Bot" ? 0.8 : 0.4,
+            caution: name === "Kivi Bot" ? 0.2 : 0.6,
+            greed: name === "Kivi Bot" ? 0.9 : 0.5,
+            auctionParticipation: name === "Kivi Bot" ? 0.8 : 0.6 // Auction katılım isteği
         };
+
+        // Auction state
+        this.currentAuction = null;
+        this.lastBidTime = 0;
     }
 
     update(playerX, playerY) {
@@ -7274,7 +7283,6 @@ class RealGameBot {
     handleSquareAction() {
         console.log(`🎯 ${this.name} karede - Para: $${this.money}`);
         
-        // Gerçek oyun karesini bul
         const gameSquare = this.findGameSquare();
         if (gameSquare) {
             this.processGameSquare(gameSquare);
@@ -7282,7 +7290,6 @@ class RealGameBot {
     }
 
     findGameSquare() {
-        // Oyunun gerçek kare sistemine eriş
         if (window.game && window.game.squares) {
             for (let square of window.game.squares) {
                 const distance = Math.sqrt((square.x - this.x) ** 2 + (square.y - this.y) ** 2);
@@ -7295,15 +7302,11 @@ class RealGameBot {
     }
 
     processGameSquare(square) {
-        // OYUNUN GERÇEK MEKANİKLERİNE GÖRE İŞLEM YAP
         if (square.owner === undefined || square.owner === null) {
-            // Sahipsiz mülk - SATIN ALMAYI DENE
             this.tryBuyProperty(square);
         } else if (square.owner === this.id) {
-            // Kendi mülküm - YATIRIM YAP
             this.tryInvestInProperty(square);
         } else {
-            // Başkasının mülkü - TEKLİF VER veya KİRA ÖDE
             if (Math.random() < this.personality.aggression) {
                 this.tryMakeOffer(square);
             }
@@ -7314,7 +7317,7 @@ class RealGameBot {
     tryBuyProperty(property) {
         if (!property.price || this.money < property.price) return;
 
-        const baseProbability = 0.6;
+        const baseProbability = 0.7; // Daha yüksek satın alma olasılığı
         const moneyFactor = (this.money - property.price) / this.money;
         const personalityFactor = this.personality.aggression;
         
@@ -7322,8 +7325,6 @@ class RealGameBot {
         
         if (Math.random() < buyProbability) {
             this.executeBuyProperty(property);
-        } else if (Math.random() < 0.3) {
-            this.startAuctionForProperty(property);
         }
     }
 
@@ -7334,157 +7335,133 @@ class RealGameBot {
         
         console.log(`🏠 ${this.name} MÜLK SATIN ALDI: ${property.name || 'İsimsiz'} - $${property.price}`);
         
-        // GERÇEK OYUN FONKSİYONUNU ÇAĞIR
         if (window.game && window.game.buyProperty) {
             window.game.buyProperty(property, this);
-        } else {
-            // Fallback: oyun state'ini güncelle
-            property.owner = this;
-            this.updateGameUI();
         }
     }
 
-    tryInvestInProperty(property) {
-        const investmentOptions = [0.25, 0.5, 0.75, 1.0];
-        const selectedOption = investmentOptions[Math.floor(Math.random() * investmentOptions.length)];
-        const investmentAmount = Math.floor(property.price * selectedOption);
+    // ✅ YENİ: AUCTION BID VERME MEKANİZMASI
+    participateInAuction(auction) {
+        if (!auction || !auction.property || auction.seller.id === this.id) return;
         
-        if (this.money >= investmentAmount && Math.random() < 0.5) {
-            this.executeInvestment(property, investmentAmount, selectedOption);
-        }
-    }
-
-    executeInvestment(property, amount, percentage) {
-        this.money -= amount;
-        property.investment = (property.investment || 0) + amount;
-        property.rent = (property.rent || 100) * (1 + percentage * 0.3);
+        this.currentAuction = auction;
+        const property = auction.property;
+        const currentBid = auction.currentBid || auction.startingPrice;
+        const minBid = currentBid + (auction.minimumBid || 100);
         
-        console.log(`💰 ${this.name} YATIRIM YAPTI: ${property.name || 'İsimsiz'} - %${percentage * 100} - $${amount}`);
-    }
-
-    tryMakeOffer(property) {
-        if (!property.owner || property.owner === this.id) return;
-
-        const owner = this.findPropertyOwner(property);
-        if (!owner) return;
-
-        const offerOptions = [0.25, 0.5, 0.75, 1.0];
-        const selectedOption = offerOptions[Math.floor(Math.random() * offerOptions.length)];
-        const offerPrice = Math.floor(property.price * selectedOption * (0.9 + Math.random() * 0.4));
+        // Mülk değerini hesapla
+        const propertyValue = this.calculatePropertyValue(property);
+        const maxBid = propertyValue * (1.2 + this.personality.auctionParticipation * 0.3); // Maksimum %50 fazla ödeyebilir
         
-        if (this.money >= offerPrice && Math.random() < (0.3 + this.personality.aggression * 0.3)) {
-            this.executeMakeOffer(property, owner, selectedOption, offerPrice);
-        }
-    }
-
-    executeMakeOffer(property, owner, percentage, price) {
-        console.log(`🤝 ${this.name} TEKLİF VERDİ: ${property.name || 'İsimsiz'} -> ${owner.name || 'Sahip'} - %${percentage * 100} - $${price}`);
-        
-        // GERÇEK TEKLİF SİSTEMİNİ TETİKLE
-        if (window.game && window.game.makeOffer) {
-            window.game.makeOffer({
-                property: property,
-                buyer: this,
-                seller: owner,
-                percentage: percentage,
-                price: price
-            });
-        } else {
-            // Fallback: direkt teklif işlemi
-            this.processDirectOffer(property, owner, price, percentage);
-        }
-    }
-
-    processDirectOffer(property, owner, price, percentage) {
-        // Bot teklif değerlendirme algoritması
-        const ownerIsBot = owner.isPlayer === false;
-        let acceptProbability = 0.3;
-        
-        if (ownerIsBot) {
-            // Bot sahipse daha karmaşık değerlendirme
-            const botOwner = owner;
-            const propertyValue = property.price + (property.investment || 0);
-            const offerRatio = price / propertyValue;
+        // Bid verme kararı
+        if (minBid <= maxBid && this.money >= minBid) {
+            const bidProbability = 0.6 + this.personality.auctionParticipation * 0.3;
             
-            acceptProbability = offerRatio * 0.8 + botOwner.personality.greed * 0.2;
+            if (Math.random() < bidProbability) {
+                const bidAmount = this.calculateSmartBid(currentBid, minBid, maxBid);
+                this.placeBid(auction, bidAmount);
+            }
+        }
+    }
+
+    calculateSmartBid(currentBid, minBid, maxBid) {
+        // Akıllı bid hesaplama
+        const aggressiveBid = currentBid + (maxBid - currentBid) * 0.3;
+        const conservativeBid = minBid + (minBid * 0.1);
+        
+        if (this.personality.aggression > 0.7) {
+            return Math.min(aggressiveBid, maxBid);
         } else {
-            // İnsan sahipse basit değerlendirme
-            acceptProbability = 0.4;
+            return Math.min(conservativeBid, maxBid);
         }
+    }
 
-        if (Math.random() < acceptProbability) {
-            console.log(`✅ TEKLİF KABUL EDİLDİ: ${owner.name || 'Sahip'} -> ${this.name} - $${price}`);
-            this.completeOffer(property, owner, price);
+    placeBid(auction, bidAmount) {
+        if (this.money < bidAmount) return;
+        
+        console.log(`🎪 ${this.name} AUCTION BID: $${bidAmount} for ${auction.property.name || 'İsimsiz'}`);
+        
+        // Oyunun bid fonksiyonunu çağır
+        if (window.game && window.game.placeBid) {
+            window.game.placeBid(auction, this, bidAmount);
         } else {
-            console.log(`❌ TEKLİF REDDEDİLDİ: ${owner.name || 'Sahip'} -> ${this.name}`);
+            // Fallback
+            auction.currentBid = bidAmount;
+            auction.currentBidder = this;
+            this.lastBidTime = Date.now();
         }
     }
 
-    completeOffer(property, owner, price) {
-        // Mülk transferi
-        this.money -= price;
-        if (owner.money !== undefined) owner.money += price;
+    calculatePropertyValue(property) {
+        // Gelişmiş mülk değerleme
+        let value = property.price || 1000;
         
-        // Eski sahipten çıkar
-        if (owner.properties) {
-            owner.properties = owner.properties.filter(p => p !== property);
+        // Yatırım değeri
+        if (property.investment) {
+            value += property.investment * 1.2;
         }
         
-        // Yeni sahibe ekle
-        property.owner = this.id;
-        this.properties.push(property);
-        
-        console.log(`🔄 MÜLK TRANSFER: ${owner.name || 'Sahip'} -> ${this.name} - $${price}`);
-    }
-
-    startAuctionForProperty(property) {
-        console.log(`🎯 ${this.name} AÇIK ARTTIRMA BAŞLATTI: ${property.name || 'İsimsiz'}`);
-        
-        if (window.game && window.game.startAuction) {
-            window.game.startAuction({
-                property: property,
-                seller: this,
-                startingPrice: Math.floor(property.price * 0.7)
-            });
+        // Kira geliri
+        if (property.rent) {
+            value += property.rent * 15; // 15 tur kira geliri
         }
-    }
-
-    // TEKLİF CEVAP MEKANİZMASI - BURASI ÖNEMLİ!
-    respondToOffer(offer) {
-        if (offer.seller.id === this.id) {
-            // Bize gelen teklifi değerlendir
-            return this.evaluateIncomingOffer(offer);
+        
+        // Grup tamamlama bonusu
+        if (property.group) {
+            const groupProperties = this.getPropertiesInGroup(property.group);
+            const ownedInGroup = groupProperties.filter(p => p.owner === this.id).length;
+            value += (ownedInGroup / groupProperties.length) * 1000;
         }
-        return false;
+        
+        return value;
     }
 
+    getPropertiesInGroup(group) {
+        if (!window.game || !window.game.squares) return [];
+        return window.game.squares.filter(sq => sq.group === group);
+    }
+
+    // ✅ GÜNCELLENMİŞ: TRADE OFFER DEĞERLENDİRME (1.5x KAR ŞARTI)
     evaluateIncomingOffer(offer) {
         const property = offer.property;
         const offeredPrice = offer.price;
-        const propertyValue = property.price + (property.investment || 0);
+        const propertyValue = this.calculatePropertyValue(property);
         
-        let acceptProbability = 0.3;
+        console.log(`💰 ${this.name} TEKLİF DEĞERLENDİRİYOR: Mülk Değeri: $${propertyValue}, Teklif: $${offeredPrice}`);
         
-        // Fiyat değerlendirmesi
-        const priceRatio = offeredPrice / propertyValue;
-        if (priceRatio > 1.2) acceptProbability += 0.4;
-        else if (priceRatio > 1.0) acceptProbability += 0.2;
-        else if (priceRatio < 0.8) acceptProbability -= 0.2;
+        // ✅ 1.5x KAR KONTROLÜ (EN AZ %50 KAR)
+        const profitRatio = offeredPrice / propertyValue;
+        const hasMinimumProfit = profitRatio >= 1.5;
+        
+        let acceptProbability = 0;
+        
+        if (hasMinimumProfit) {
+            // 1.5x kar varsa yüksek kabul olasılığı
+            acceptProbability = 0.8 + (profitRatio - 1.5) * 0.5; // Kar arttıkça kabul olasılığı artar
+            console.log(`✅ ${this.name} için %${((profitRatio - 1) * 100).toFixed(1)} KAR - YÜKSEK KABUL İHTİMALİ`);
+        } else {
+            // Minimum kar yoksa düşük kabul olasılığı
+            acceptProbability = 0.1 + (profitRatio - 1) * 0.3;
+            console.log(`❌ ${this.name} için YETERSİZ KAR - DÜŞÜK KABUL İHTİMALİ`);
+        }
         
         // Kişilik faktörleri
         acceptProbability += this.personality.greed * 0.2;
         acceptProbability -= this.personality.caution * 0.1;
         
-        // Para ihtiyacı
-        if (this.money < 2000) acceptProbability += 0.2;
+        // Para ihtiyacı - para azsa daha çok kabul et
+        if (this.money < 3000) {
+            acceptProbability += 0.3;
+            console.log(`💸 ${this.name} PARA AZ - KABUL İHTİMALİ ARTTI`);
+        }
         
-        const shouldAccept = Math.random() < Math.max(0.1, Math.min(0.9, acceptProbability));
+        const shouldAccept = Math.random() < Math.max(0.05, Math.min(0.95, acceptProbability));
         
         if (shouldAccept) {
-            console.log(`✅ ${this.name} TEKLİFİ KABUL ETTİ: $${offeredPrice} for ${property.name || 'İsimsiz'}`);
+            console.log(`✅ ${this.name} TEKLİFİ KABUL ETTİ: $${offeredPrice} (${((profitRatio - 1) * 100).toFixed(1)}% kar)`);
             this.acceptOffer(offer);
         } else {
-            console.log(`❌ ${this.name} TEKLİFİ REDDETTİ: $${offeredPrice}`);
+            console.log(`❌ ${this.name} TEKLİFİ REDDETTİ: $${offeredPrice} (${((profitRatio - 1) * 100).toFixed(1)}% kar)`);
         }
         
         return shouldAccept;
@@ -7505,17 +7482,35 @@ class RealGameBot {
         // Yeni sahibe ekle
         property.owner = buyer.id;
         if (buyer.properties) buyer.properties.push(property);
+        
+        console.log(`🔄 MÜLK TRANSFER: ${this.name} -> ${buyer.name} - $${price}`);
     }
 
-    payRentToOwner(property) {
-        const rentAmount = property.rent || 200;
-        if (this.money >= rentAmount) {
-            this.money -= rentAmount;
-            const owner = this.findPropertyOwner(property);
-            if (owner && owner.money !== undefined) {
-                owner.money += rentAmount;
-            }
-            console.log(`🏦 ${this.name} KİRA ÖDEDİ: $${rentAmount} - ${property.name || 'İsimsiz'}`);
+    tryMakeOffer(property) {
+        if (!property.owner || property.owner === this.id) return;
+
+        const owner = this.findPropertyOwner(property);
+        if (!owner) return;
+
+        const propertyValue = this.calculatePropertyValue(property);
+        const offerPrice = propertyValue * (0.8 + Math.random() * 0.4); // %80-120 arası
+        
+        if (this.money >= offerPrice && Math.random() < (0.3 + this.personality.aggression * 0.3)) {
+            this.executeMakeOffer(property, owner, offerPrice);
+        }
+    }
+
+    executeMakeOffer(property, owner, price) {
+        console.log(`🤝 ${this.name} TEKLİF VERDİ: ${property.name || 'İsimsiz'} -> ${owner.name || 'Sahip'} - $${price}`);
+        
+        if (window.game && window.game.makeOffer) {
+            window.game.makeOffer({
+                property: property,
+                buyer: this,
+                seller: owner,
+                price: price,
+                percentage: 1.0 // Tam mülk
+            });
         }
     }
 
@@ -7557,6 +7552,7 @@ class RealGameBot {
 
     endTurn() {
         this.isMoving = false;
+        this.currentAuction = null;
     }
 
     draw(ctx) {
@@ -7603,13 +7599,14 @@ class RealGameBot {
     }
 }
 
-class IntegratedBotManager {
+class AdvancedBotManager {
     constructor() {
         this.bots = [];
         this.currentBotIndex = 0;
         this.isBotTurn = false;
         this.turnTimer = 0;
-        this.pendingOffers = [];
+        this.activeAuctions = [];
+        this.auctionCheckInterval = null;
     }
 
     initialize() {
@@ -7618,61 +7615,133 @@ class IntegratedBotManager {
         for (let i = 0; i < botNames.length; i++) {
             const x = 150 + (i * 500);
             const y = 300;
-            const bot = new RealGameBot(x, y, botNames[i]);
+            const bot = new AdvancedGameBot(x, y, botNames[i]);
             this.bots.push(bot);
         }
+        
+        // Auction kontrol mekanizmasını başlat
+        this.startAuctionMonitoring();
         
         // Oyun sistemlerine entegre ol
         this.integrateWithGame();
         
-        console.log('🤖 ENTEGRE BOT SİSTEMİ AKTİF!');
-        console.log('🎮 Kivi Bot - Saldırgan ($12,000)');
-        console.log('🎮 Lef Bot - Dengeli ($8,000)');
+        console.log('🤖 GELİŞMİŞ BOT SİSTEMİ AKTİF!');
+        console.log('🎮 Kivi Bot - Auction Sever ($12,000)');
+        console.log('🎮 Lef Bot - Balanced Bidder ($8,000)');
+        console.log('✅ Auction Bid ve 1.5x Kar Mekaniği AKTİF');
+    }
+
+    startAuctionMonitoring() {
+        // Her 3 saniyede bir aktif auction'ları kontrol et
+        this.auctionCheckInterval = setInterval(() => {
+            this.checkActiveAuctions();
+        }, 3000);
+    }
+
+    checkActiveAuctions() {
+        if (this.activeAuctions.length === 0) return;
+        
+        this.activeAuctions.forEach(auction => {
+            if (!auction.ended) {
+                this.bots.forEach(bot => {
+                    if (bot.id !== auction.seller.id && Math.random() < bot.personality.auctionParticipation) {
+                        setTimeout(() => {
+                            bot.participateInAuction(auction);
+                        }, Math.random() * 2000); // Rastgele gecikme
+                    }
+                });
+            }
+        });
     }
 
     integrateWithGame() {
-        // Oyunun teklif sistemine bağlan
-        this.hookIntoOfferSystem();
+        // Auction sistemine hook
+        this.hookIntoAuctionSystem();
         
-        // Oyunun mülk sistemine bağlan
-        this.hookIntoPropertySystem();
+        // Offer sistemine hook
+        this.hookIntoOfferSystem();
+    }
+
+    hookIntoAuctionSystem() {
+        // Oyunun auction başlatma fonksiyonunu izle
+        const originalStartAuction = window.game?.startAuction;
+        window.game.startAuction = (auctionData) => {
+            console.log(`🎪 AUCTION BAŞLATILDI: ${auctionData.seller?.name} -> ${auctionData.property?.name}`);
+            
+            // Auction'ı aktif listeye ekle
+            this.activeAuctions.push({
+                ...auctionData,
+                startedAt: Date.now(),
+                ended: false
+            });
+            
+            // Botlara auction'ı duyur
+            this.notifyBotsAboutAuction(auctionData);
+            
+            if (originalStartAuction) {
+                originalStartAuction(auctionData);
+            }
+        };
+
+        // Oyunun bid fonksiyonunu izle
+        const originalPlaceBid = window.game?.placeBid;
+        window.game.placeBid = (auction, bidder, amount) => {
+            console.log(`💰 BID: ${bidder.name} -> $${amount}`);
+            
+            // Auction state'ini güncelle
+            const activeAuction = this.activeAuctions.find(a => a.property === auction.property);
+            if (activeAuction) {
+                activeAuction.currentBid = amount;
+                activeAuction.currentBidder = bidder;
+                activeAuction.lastBidTime = Date.now();
+            }
+            
+            if (originalPlaceBid) {
+                originalPlaceBid(auction, bidder, amount);
+            }
+        };
     }
 
     hookIntoOfferSystem() {
-        // Oyunun teklif fonksiyonunu override et
         const originalMakeOffer = window.game?.makeOffer;
         window.game.makeOffer = (offerData) => {
-            console.log(`🤝 TEKLİF SİSTEMİ: ${offerData.buyer?.name} -> ${offerData.seller?.name}`);
+            console.log(`🤝 OYUN TEKLİF SİSTEMİ: ${offerData.buyer?.name} -> ${offerData.seller?.name}`);
             
-            // Eğer teklif bot'a gidiyorsa, bot'a ilet
+            // Eğer teklif bot'a gidiyorsa
             if (offerData.seller && offerData.seller.isPlayer === false) {
                 this.receiveOffer(offerData);
             }
             
-            // Orijinal fonksiyonu çağır (eğer varsa)
             if (originalMakeOffer) {
                 originalMakeOffer(offerData);
             }
         };
     }
 
-    hookIntoPropertySystem() {
-        // Mülk sistemini izle
-        if (window.game && !window.game.properties) {
-            window.game.properties = [];
-        }
+    notifyBotsAboutAuction(auction) {
+        this.bots.forEach(bot => {
+            if (bot.id !== auction.seller.id) {
+                // Botları auction'a katılmaya teşvik et
+                setTimeout(() => {
+                    if (Math.random() < bot.personality.auctionParticipation) {
+                        bot.participateInAuction(auction);
+                    }
+                }, 1000 + Math.random() * 2000);
+            }
+        });
     }
 
     receiveOffer(offer) {
-        this.pendingOffers.push(offer);
-        console.log(`📨 BOT'A TEKLİF GELDİ: ${offer.seller.name} -> ${offer.property?.name}`);
+        console.log(`📨 BOT'A TEKLİF GELDİ: ${offer.buyer.name} -> ${offer.property?.name}`);
         
-        // Bot'a teklifi ilet
         const targetBot = this.bots.find(bot => bot.id === offer.seller.id);
         if (targetBot) {
             setTimeout(() => {
-                targetBot.respondToOffer(offer);
-            }, 1000);
+                const accepted = targetBot.evaluateIncomingOffer(offer);
+                if (accepted) {
+                    console.log(`🎉 TEKLİF KABUL EDİLDİ: ${targetBot.name} -> ${offer.buyer.name}`);
+                }
+            }, 1500); // Gerçekçi gecikme
         }
     }
 
@@ -7714,7 +7783,6 @@ class IntegratedBotManager {
         
         console.log('🔄 Bot sırası bitti, oyuncu sırası!');
         
-        // Oyuncu sırasını aktif et
         if (window.game && window.game.player) {
             window.game.player.canMove = true;
         }
@@ -7730,8 +7798,8 @@ class IntegratedBotManager {
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
         if (window.game) {
-            // Bot manager'ı oluştur ve oyuna entegre et
-            window.game.botManager = new IntegratedBotManager();
+            // Gelişmiş bot manager'ı oluştur
+            window.game.botManager = new AdvancedBotManager();
             window.game.botManager.initialize();
             
             // Botları oyuncu listesine ekle
@@ -7772,9 +7840,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             };
             
-            console.log('✅ TAM ENTEGRE BOT SİSTEMİ HAZIR!');
-            console.log('🎯 Artık botlar tekliflere tepki verecek');
-            console.log('💰 Gerçek mülk mekaniği çalışıyor');
+            console.log('✅ GELİŞMİŞ BOT SİSTEMİ HAZIR!');
+            console.log('🎪 Auction Bid Mekaniği: AKTİF');
+            console.log('💰 1.5x Kar ile Trade Kabul: AKTİF');
+            console.log('🤖 Botlar artık auctionlara bid verecek ve karlı teklifleri kabul edecek!');
         }
     }, 3000);
 });
