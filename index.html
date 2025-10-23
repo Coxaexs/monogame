@@ -1397,6 +1397,9 @@ padding-bottom: 20;
                     background: #eff6ff;
                 }
             }
+            .game-link-display{
+                display: none !important;
+            }
         </style>
         
         <!-- 🎨 Dark Mode Toggle (Top Right) -->
@@ -1414,6 +1417,8 @@ padding-bottom: 20;
                 </button>
             </div>
         </div>
+
+
         
         <!-- Player Info and Controls -->
         <div id="left-panel" class="w-full lg:w-1/4 bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-4 flex flex-col gap-3 overflow-y-auto border-2 border-gray-200">
@@ -4234,6 +4239,101 @@ padding-bottom: 20;
             };
         }
         
+        // 🤖 Bot Property Purchase Decision
+        async function botDecidePropertyPurchase(position) {
+            const space = gameData.settings.board[position];
+            const currentPlayer = gameData.players[gameData.currentPlayerIndex];
+            
+            // Calculate property value score (0-100)
+            let valueScore = 0;
+            
+            // Base value by type
+            switch(space.type) {
+                case 'railroad':
+                    valueScore = 80; // Railroads are very valuable for monopolies
+                    break;
+                case 'utility':
+                    valueScore = 70; // Utilities are valuable but expensive
+                    break;
+                case 'property':
+                    // Value based on color group and position
+                    const colorGroups = {
+                        'brown': 40, 'lightblue': 45, 'pink': 50, 'orange': 55,
+                        'red': 60, 'yellow': 65, 'green': 70, 'darkblue': 75
+                    };
+                    valueScore = colorGroups[space.color] || 50;
+                    break;
+            }
+            
+            // Adjust for current money situation
+            const moneyRatio = currentPlayer.money / space.price;
+            let affordabilityScore = 0;
+            
+            if (moneyRatio >= 2) affordabilityScore = 100; // Very affordable
+            else if (moneyRatio >= 1.5) affordabilityScore = 80; // Affordable
+            else if (moneyRatio >= 1) affordabilityScore = 60; // Just affordable
+            else if (moneyRatio >= 0.8) affordabilityScore = 40; // Tight but possible
+            else affordabilityScore = 0; // Can't afford
+            
+            // Strategic consideration: Check if bot already owns properties in this color group
+            let monopolyBonus = 0;
+            if (space.type === 'property') {
+                const sameColorProperties = gameData.settings.board.filter(p => 
+                    p.type === 'property' && p.color === space.color
+                );
+                const ownedSameColor = sameColorProperties.filter(p => 
+                    gameData.properties[p.position] && 
+                    (gameData.properties[p.position].ownerId === currentPlayer.id ||
+                     (gameData.properties[p.position].owners && gameData.properties[p.position].owners[currentPlayer.id]))
+                ).length;
+                
+                if (ownedSameColor > 0) {
+                    monopolyBonus = 20; // Bonus for completing color groups
+                }
+            }
+            
+            // Calculate final decision score
+            const finalScore = (valueScore * 0.4) + (affordabilityScore * 0.5) + (monopolyBonus * 0.1);
+            
+            // Decision thresholds
+            if (finalScore >= 70) {
+                // Buy 100% if very valuable and affordable
+                addLog(`🤖 ${currentPlayer.name} decided to buy ${space.name} for $${space.price}.`);
+                await buyPropertyWithShare(position, 100);
+            } else if (finalScore >= 50) {
+                // Buy 75% if moderately valuable
+                const cost75 = Math.floor(space.price * 0.75);
+                if (currentPlayer.money >= cost75) {
+                    addLog(`🤖 ${currentPlayer.name} decided to buy 75% of ${space.name} for $${cost75}.`);
+                    await buyPropertyWithShare(position, 75);
+                } else {
+                    // Can't afford 75%, try 50%
+                    const cost50 = Math.floor(space.price * 0.5);
+                    if (currentPlayer.money >= cost50) {
+                        addLog(`🤖 ${currentPlayer.name} decided to buy 50% of ${space.name} for $${cost50}.`);
+                        await buyPropertyWithShare(position, 50);
+                    } else {
+                        addLog(`🤖 ${currentPlayer.name} decided not to buy ${space.name} (can't afford).`);
+                        await startAuction(position);
+                    }
+                }
+            } else if (finalScore >= 30) {
+                // Buy 50% if borderline
+                const cost50 = Math.floor(space.price * 0.5);
+                if (currentPlayer.money >= cost50) {
+                    addLog(`🤖 ${currentPlayer.name} decided to buy 50% of ${space.name} for $${cost50}.`);
+                    await buyPropertyWithShare(position, 50);
+                } else {
+                    addLog(`🤖 ${currentPlayer.name} decided not to buy ${space.name} (can't afford).`);
+                    await startAuction(position);
+                }
+            } else {
+                // Don't buy, start auction
+                addLog(`🤖 ${currentPlayer.name} decided not to buy ${space.name} (not valuable enough).`);
+                await startAuction(position);
+            }
+        }
+        
         async function handleLanding(position) {
             const currentPlayer = gameData.players[gameData.currentPlayerIndex];
             const space = gameData.board[position];
@@ -4360,8 +4460,14 @@ padding-bottom: 20;
                 case 'railroad':
                 case 'utility':
                     if (propertyState.ownerId === null || (propertyState.owners && Object.keys(propertyState.owners).length === 0)) {
-                        // Show property buy panel instead of modal
-                        showPropertyBuyPanel(position);
+                        // Check if current player is a bot
+                        if (currentPlayer.isBot) {
+                            // Bot automatically decides whether to buy
+                            await botDecidePropertyPurchase(position);
+                        } else {
+                            // Show property buy panel for human players
+                            showPropertyBuyPanel(position);
+                        }
                     } else if (propertyState.ownerId !== currentPlayer.id && !(propertyState.owners && propertyState.owners[currentPlayer.id])) {
                         // Kart başka birine ait ve bende hissem yok
                         payRent(position);
@@ -4661,7 +4767,159 @@ padding-bottom: 20;
             
             if (myRequests.length > 0) {
                 const latestRequest = myRequests[myRequests.length - 1];
-                showPartnershipRequestModal(latestRequest);
+                
+                // Check if the current player (who might be receiving this request) is a bot
+                const currentPlayer = gameData.players[gameData.currentPlayerIndex];
+                if (currentPlayer && currentPlayer.id === localPlayer.id && currentPlayer.isBot) {
+                    // Bot automatically decides on partnership
+                    botDecidePartnership(latestRequest);
+                } else {
+                    // Show modal for human players
+                    showPartnershipRequestModal(latestRequest);
+                }
+            }
+        }
+        
+        // 🤖 Bot Partnership Decision
+        async function botDecidePartnership(request) {
+            const requester = gameData.players.find(p => p.id === request.requesterId);
+            const partner = gameData.players.find(p => p.id === request.partnerId);
+            const space = gameData.settings.board[request.propertyPosition];
+            
+            if (!requester || !partner) {
+                declinePartnership(request.id);
+                return;
+            }
+            
+            // Check if bot can afford
+            if (partner.money < request.partnerCost) {
+                addLog(`🤖 ${partner.name} declined partnership with ${requester.name} for ${space.name} (can't afford $${request.partnerCost}).`);
+                declinePartnership(request.id);
+                return;
+            }
+            
+            // Calculate property value score (same as in property purchase)
+            let propertyValueScore = 0;
+            switch(space.type) {
+                case 'railroad': propertyValueScore = 80; break;
+                case 'utility': propertyValueScore = 70; break;
+                case 'property':
+                    const colorGroups = {
+                        'brown': 40, 'lightblue': 45, 'pink': 50, 'orange': 55,
+                        'red': 60, 'yellow': 65, 'green': 70, 'darkblue': 75
+                    };
+                    propertyValueScore = colorGroups[space.color] || 50;
+                    break;
+            }
+            
+            // Partner trust score (based on existing partnerships)
+            let trustScore = 50; // Base trust
+            let existingPartnerships = 0;
+            
+            // Count existing partnerships between these players
+            Object.values(gameData.properties).forEach(property => {
+                if (property.owners && property.owners[requester.id] && property.owners[partner.id]) {
+                    existingPartnerships++;
+                    trustScore += 10; // Bonus for existing partnerships
+                }
+            });
+            
+            // Adjust trust based on requester's financial situation
+            const requesterMoneyRatio = requester.money / (requester.money + partner.money);
+            if (requesterMoneyRatio > 0.6) trustScore += 10; // Requester is wealthier
+            else if (requesterMoneyRatio < 0.4) trustScore -= 10; // Requester is poorer
+            
+            // Cost fairness score
+            const myShareRatio = request.partnerShare / 100;
+            const costFairness = Math.abs(myShareRatio - (request.partnerCost / space.price));
+            const fairnessScore = Math.max(0, 100 - (costFairness * 200)); // Penalize unfair deals
+            
+            // Strategic value: Check if this completes a color group
+            let strategicBonus = 0;
+            if (space.type === 'property') {
+                const sameColorProperties = gameData.settings.board.filter(p => 
+                    p.type === 'property' && p.color === space.color
+                );
+                const partnerOwnedSameColor = sameColorProperties.filter(p => 
+                    gameData.properties[p.position] && 
+                    (gameData.properties[p.position].ownerId === partner.id ||
+                     (gameData.properties[p.position].owners && gameData.properties[p.position].owners[partner.id]))
+                ).length;
+                
+                if (partnerOwnedSameColor > 0) {
+                    strategicBonus = 15; // Bonus for completing color groups
+                }
+            }
+            
+            // Calculate final decision score
+            const finalScore = (propertyValueScore * 0.3) + (trustScore * 0.25) + (fairnessScore * 0.25) + (strategicBonus * 0.2);
+            
+            if (finalScore >= 65) {
+                // Accept partnership
+                addLog(`🤖 ${partner.name} accepted partnership with ${requester.name} for ${request.partnerShare}% of ${space.name} (cost: $${request.partnerCost}).`);
+                
+                // Accept partnership - implement bot logic inline
+                const requests = [...(gameData.partnershipRequests || [])];
+                const request = requests.find(r => r.id === requestId);
+                
+                if (request) {
+                    const playersCopy = JSON.parse(JSON.stringify(gameData.players));
+                    const propertiesCopy = JSON.parse(JSON.stringify(gameData.properties));
+                    
+                    const requesterIndex = playersCopy.findIndex(p => p.id === request.requesterId);
+                    const partnerIndex = playersCopy.findIndex(p => p.id === request.partnerId);
+                    
+                    // Deduct money
+                    playersCopy[requesterIndex].money -= request.requesterCost;
+                    playersCopy[partnerIndex].money -= request.partnerCost;
+                    
+                    // Set up ownership
+                    if (!propertiesCopy[request.propertyPosition].owners) {
+                        propertiesCopy[request.propertyPosition].owners = {};
+                    }
+                    propertiesCopy[request.propertyPosition].owners[request.requesterId] = request.requesterShare;
+                    propertiesCopy[request.propertyPosition].owners[request.partnerId] = request.partnerShare;
+                    
+                    // Determine main owner (highest share)
+                    const mainOwner = request.requesterShare > request.partnerShare ? request.requesterId : request.partnerId;
+                    propertiesCopy[request.propertyPosition].ownerId = mainOwner;
+                    
+                    // Remove request
+                    const updatedRequests = requests.filter(r => r.id !== requestId);
+                    
+                    await updateGame({
+                        players: playersCopy,
+                        properties: propertiesCopy,
+                        partnershipRequests: updatedRequests,
+                        turnState: 'action_complete',
+                        gameLog: [...gameData.gameLog, `� ${request.requesterName} and ${request.partnerName} became partners on ${request.propertyName}!`]
+                    });
+                }
+            } else {
+                // Decline partnership
+                addLog(`🤖 ${partner.name} declined partnership with ${requester.name} for ${space.name} (score: ${Math.round(finalScore)}).`);
+                
+                // Decline partnership - implement bot logic inline
+                const requests = [...(gameData.partnershipRequests || [])];
+                const request = requests.find(r => r.id === requestId);
+                
+                if (request) {
+                    // Remove request
+                    const updatedRequests = requests.filter(r => r.id !== requestId);
+                    
+                    // Add to declined list so requester knows
+                    const declinedRequests = gameData.declinedPartnershipRequests || [];
+                    declinedRequests.push({
+                        ...request,
+                        declinedAt: Date.now()
+                    });
+                    
+                    await updateGame({
+                        partnershipRequests: updatedRequests,
+                        declinedPartnershipRequests: declinedRequests,
+                        gameLog: [...gameData.gameLog, `❌ ${request.partnerName} declined partnership with ${request.requesterName} for ${request.propertyName}`]
+                    });
+                }
             }
         }
         
