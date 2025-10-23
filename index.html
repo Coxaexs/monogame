@@ -6867,6 +6867,398 @@ padding-bottom: 20;
             <button id="closeManagementModal" class="w-full bg-gray-500 text-white p-2 rounded">Close</button>
         </div>
     </div>
+    <script>
+// === AKILLI BOT SISTEMI === //
+class SmartBot {
+    constructor(x, y, name = "Bot") {
+        this.x = x;
+        this.y = y;
+        this.name = name;
+        this.speed = 2;
+        this.targetX = x;
+        this.targetY = y;
+        this.health = 100;
+        this.isActive = true;
+        this.color = `hsl(${Math.random() * 360}, 70%, 50%)`;
+        this.size = 15;
+        this.isMoving = false;
+        this.moveCooldown = 0;
+
+        // Bot ekonomisi
+        this.money = 5000; // Başlangıç parası
+        this.properties = [];
+        this.investmentStrategy = Math.random(); // 0-1 arası: 0 tutucu, 1 agresif
+        this.negotiationStyle = Math.random(); // 0-1 arası: 0 pasif, 1 agresif
+    }
+
+    update(playerX, playerY) {
+        if (!this.isActive) return;
+
+        if (this.moveCooldown > 0) {
+            this.moveCooldown--;
+            return;
+        }
+
+        if (!this.isMoving) return;
+
+        if (Math.abs(this.x - this.targetX) < 2 && Math.abs(this.y - this.targetY) < 2) {
+            this.isMoving = false;
+            this.x = this.targetX;
+            this.y = this.targetY;
+            
+            // Hedefe ulaşınca mülk işlemlerini dene
+            this.tryPropertyAction();
+            return;
+        }
+
+        let dx = this.targetX - this.x;
+        let dy = this.targetY - this.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance > 0) {
+            this.x += (dx / distance) * this.speed;
+            this.y += (dy / distance) * this.speed;
+        }
+
+        this.x = Math.max(this.size, Math.min(800 - this.size, this.x));
+        this.y = Math.max(this.size, Math.min(600 - this.size, this.y));
+    }
+
+    tryPropertyAction() {
+        // Mevcut konumdaki mülkü bul
+        const currentProperty = this.findPropertyAtPosition(this.x, this.y);
+        
+        if (currentProperty) {
+            if (!currentProperty.owner) {
+                // Sahipsiz mülk - satın almayı dene
+                this.considerBuyingProperty(currentProperty);
+            } else if (currentProperty.owner === this) {
+                // Kendi mülküm - yatırım yapmayı dene
+                this.considerInvestingInProperty(currentProperty);
+            } else {
+                // Başkasının mülkü - teklif vermeyi dene
+                this.considerMakingOffer(currentProperty);
+            }
+        }
+    }
+
+    findPropertyAtPosition(x, y) {
+        // Oyunun mülk sistemine eriş - bu kısmı oyun koduna göre ayarlamalısın
+        if (window.game && window.game.properties) {
+            for (let prop of window.game.properties) {
+                const distance = Math.sqrt((prop.x - x) ** 2 + (prop.y - y) ** 2);
+                if (distance < 30) { // Mülk yakınındaysa
+                    return prop;
+                }
+            }
+        }
+        return null;
+    }
+
+    considerBuyingProperty(property) {
+        if (!property.price) return;
+
+        const affordable = this.money >= property.price;
+        const goodDeal = property.price < property.basePrice * 0.8; // %20 indirimde iyi fırsat
+        const strategyFactor = this.investmentStrategy;
+        
+        let buyProbability = 0.3; // Temel olasılık
+        
+        if (affordable) buyProbability += 0.3;
+        if (goodDeal) buyProbability += 0.4;
+        if (strategyFactor > 0.7) buyProbability += 0.2; // Agresif botlar daha çok alır
+        
+        if (Math.random() < buyProbability && affordable) {
+            this.buyProperty(property);
+        }
+    }
+
+    buyProperty(property) {
+        if (this.money >= property.price) {
+            this.money -= property.price;
+            property.owner = this;
+            this.properties.push(property);
+            console.log(`🏠 ${this.name} mülk satın aldı: ${property.name} - Kalan para: $${this.money}`);
+        }
+    }
+
+    considerInvestingInProperty(property) {
+        const investmentOptions = [0.25, 0.5, 0.75, 1.0];
+        const randomOption = investmentOptions[Math.floor(Math.random() * investmentOptions.length)];
+        const investmentAmount = property.price * randomOption;
+        
+        if (this.money >= investmentAmount && Math.random() < 0.4) {
+            this.money -= investmentAmount;
+            property.investment += investmentAmount;
+            console.log(`💰 ${this.name} yatırım yaptı: ${property.name} - ${randomOption * 100}%`);
+        }
+    }
+
+    considerMakingOffer(property) {
+        if (!property.owner || property.owner === this) return;
+
+        const offerOptions = [0.25, 0.5, 0.75, 1.0];
+        const selectedOption = offerOptions[Math.floor(Math.random() * offerOptions.length)];
+        const offerPrice = property.price * selectedOption * (0.8 + Math.random() * 0.4); // %80-120 arası
+        
+        // Teklif verme olasılığı
+        const baseProbability = 0.3;
+        const strategyBonus = this.negotiationStyle * 0.3;
+        const offerProbability = baseProbability + strategyBonus;
+        
+        if (Math.random() < offerProbability && this.money >= offerPrice) {
+            this.makeOffer(property, selectedOption, offerPrice);
+        }
+    }
+
+    makeOffer(property, percentage, price) {
+        console.log(`🤝 ${this.name} teklif verdi: ${property.name} - %${percentage * 100} - $${price}`);
+        
+        // Oyunun teklif sistemine entegre et
+        if (window.game && window.game.makeOffer) {
+            window.game.makeOffer(property, this, percentage, price);
+        }
+    }
+
+    considerAuction(property) {
+        if (Math.random() < 0.2) { // %20 olasılıkla açık arttırmaya çıkar
+            console.log(`🎯 ${this.name} açık arttırmaya çıkardı: ${property.name}`);
+            if (window.game && window.game.startAuction) {
+                window.game.startAuction(property, this);
+            }
+        }
+    }
+
+    startTurn() {
+        if (!this.isActive) return;
+        
+        this.isMoving = true;
+        this.moveCooldown = 30;
+        
+        // Stratejiye göre hedef seç
+        this.chooseStrategicTarget();
+        
+        console.log(`🎮 ${this.name} sırası! Para: $${this.money}, Mülk: ${this.properties.length}`);
+    }
+
+    chooseStrategicTarget() {
+        const strategy = this.investmentStrategy;
+        
+        if (strategy < 0.3) {
+            // Tutucu strateji - daha güvenli bölgeler
+            this.targetX = 300 + (Math.random() - 0.5) * 200;
+            this.targetY = 300 + (Math.random() - 0.5) * 200;
+        } else if (strategy < 0.7) {
+            // Dengeli strateji - orta bölgeler
+            this.targetX = 400 + (Math.random() - 0.5) * 300;
+            this.targetY = 300 + (Math.random() - 0.5) * 200;
+        } else {
+            // Agresif strateji - riskli bölgeler
+            this.targetX = 400 + (Math.random() - 0.5) * 400;
+            this.targetY = 300 + (Math.random() - 0.5) * 300;
+        }
+        
+        // Sınırları kontrol et
+        this.targetX = Math.max(50, Math.min(750, this.targetX));
+        this.targetY = Math.max(50, Math.min(550, this.targetY));
+    }
+
+    endTurn() {
+        this.isMoving = false;
+        
+        // Bazen mülklerini açık arttırmaya çıkar
+        if (this.properties.length > 0 && Math.random() < 0.1) {
+            const randomProperty = this.properties[Math.floor(Math.random() * this.properties.length)];
+            this.considerAuction(randomProperty);
+        }
+    }
+
+    draw(ctx) {
+        if (!this.isActive) return;
+
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (this.isMoving) {
+            ctx.strokeStyle = 'yellow';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size + 5, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(this.x - 5, this.y - 3, 4, 0, Math.PI * 2);
+        ctx.arc(this.x + 5, this.y - 3, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'black';
+        ctx.beginPath();
+        ctx.arc(this.x - 5, this.y - 3, 2, 0, Math.PI * 2);
+        ctx.arc(this.x + 5, this.y - 3, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'white';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.name, this.x, this.y - 25);
+        
+        ctx.fillText(`$${this.money}`, this.x, this.y - 40);
+
+        if (this.isMoving) {
+            ctx.fillStyle = 'yellow';
+            ctx.font = '10px Arial';
+            ctx.fillText('Sırası!', this.x, this.y - 55);
+        }
+    }
+}
+
+class SmartBotManager {
+    constructor() {
+        this.bots = [];
+        this.currentBotIndex = 0;
+        this.isBotTurn = false;
+        this.turnTimer = 0;
+    }
+
+    initialize() {
+        const botNames = ["Kivi Bot", "Lef Bot"];
+        
+        for (let i = 0; i < botNames.length; i++) {
+            const x = 200 + (i * 400);
+            const y = 300;
+            const bot = new SmartBot(x, y, botNames[i]);
+            
+            // Botlara farklı stratejiler ver
+            if (i === 0) {
+                bot.investmentStrategy = 0.8; // Kivi Bot agresif
+                bot.money = 6000;
+            } else {
+                bot.investmentStrategy = 0.4; // Lef Bot dengeli
+                bot.money = 4000;
+            }
+            
+            this.bots.push(bot);
+        }
+    }
+
+    update(playerX, playerY) {
+        if (!this.isBotTurn) return;
+
+        this.turnTimer++;
+        
+        const currentBot = this.bots[this.currentBotIndex];
+        if (currentBot) {
+            currentBot.update(playerX, playerY);
+            
+            if (!currentBot.isMoving && this.turnTimer > 60) {
+                this.endCurrentTurn();
+            }
+        }
+    }
+
+    startBotTurn() {
+        if (this.bots.length === 0) return;
+        
+        this.isBotTurn = true;
+        this.turnTimer = 0;
+        
+        const currentBot = this.bots[this.currentBotIndex];
+        if (currentBot) {
+            currentBot.startTurn();
+        }
+    }
+
+    endCurrentTurn() {
+        const currentBot = this.bots[this.currentBotIndex];
+        if (currentBot) {
+            currentBot.endTurn();
+        }
+        
+        this.isBotTurn = false;
+        this.currentBotIndex = (this.currentBotIndex + 1) % this.bots.length;
+        
+        console.log('🤖 Bot sırası bitti, oyuncu sırası!');
+        
+        if (window.game && window.game.player) {
+            window.game.player.canMove = true;
+        }
+    }
+
+    draw(ctx) {
+        this.bots.forEach(bot => bot.draw(ctx));
+    }
+}
+
+// === OYUN ENTEGRASYONU === //
+
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        if (window.game) {
+            window.game.smartBotManager = new SmartBotManager();
+            window.game.smartBotManager.initialize();
+            
+            // Oyuncu entegrasyonu
+            if (window.game.player) {
+                const originalPlayerUpdate = window.game.player.update;
+                window.game.player.update = function() {
+                    originalPlayerUpdate.call(this);
+                    
+                    if (this.canMove && !this.isMoving && 
+                        window.game.smartBotManager && !window.game.smartBotManager.isBotTurn) {
+                        this.canMove = false;
+                        setTimeout(() => {
+                            window.game.smartBotManager.startBotTurn();
+                        }, 1000);
+                    }
+                };
+            }
+            
+            // Oyun update entegrasyonu
+            const originalUpdate = window.game.update;
+            window.game.update = function() {
+                originalUpdate.call(this);
+                if (this.smartBotManager && this.player) {
+                    this.smartBotManager.update(this.player.x, this.player.y);
+                }
+            };
+            
+            // Oyun draw entegrasyonu
+            const originalDraw = window.game.draw;
+            window.game.draw = function() {
+                originalDraw.call(this);
+                if (this.smartBotManager && this.ctx) {
+                    this.smartBotManager.draw(this.ctx);
+                }
+            };
+            
+            console.log('🤖 Akıllı bot sistemi aktif!');
+            console.log('🎮 Kivi Bot: Agresif yatırımcı ($6000)');
+            console.log('🎮 Lef Bot: Dengeli yatırımcı ($4000)');
+            
+            // Oyunun mülk sistemine erişim için yardımcı fonksiyonlar
+            if (!window.game.properties) {
+                window.game.properties = [];
+            }
+            
+            if (!window.game.makeOffer) {
+                window.game.makeOffer = function(property, bot, percentage, price) {
+                    console.log(`📊 Teklif alındı: ${bot.name}, ${property.name}, %${percentage * 100}, $${price}`);
+                };
+            }
+            
+            if (!window.game.startAuction) {
+                window.game.startAuction = function(property, bot) {
+                    console.log(`⚡ Açık arttırma: ${bot.name}, ${property.name}`);
+                };
+            }
+        }
+    }, 2000);
+});
+</script>
 
 </body>
 </html>
