@@ -1455,7 +1455,7 @@ padding-bottom: 20;
         <div class="flex-grow flex items-center justify-center">
                 <div id="board" class="board">
                 <div class="center-board">
-                    <h1 class="text-5xl font-bold text-gray-800 tracking-wider">BUSINESS</h1>
+                    <h1 id="board-title" class="text-5xl font-bold text-gray-800 tracking-wider">BUSINESS</h1>
                     
                     <!-- 🎲 Dice Display - Center of Board -->
                     <div id="dice-container" class="flex justify-center items-center gap-4 h-24">
@@ -2203,6 +2203,8 @@ padding-bottom: 20;
         let decidedLaterTrades = []; // Trade'ler için "decide later" takibi
         let shownTradeIds = new Set(); // Gösterilen trade ID'lerini takip et
         let turnTimer = null; // ⏰ Turn timer for auto-end turn
+        let turnStartTime = null; // ⏰ Turn start time for countdown
+        let turnUpdateInterval = null; // ⏰ Interval for updating board title
 
         // --- DEFAULT GAME DATA ---
         function getDefaultBoard() {
@@ -3400,11 +3402,30 @@ padding-bottom: 20;
              board.appendChild(piecesContainer);
         }
 
+        function updateBoardTitle() {
+            if (!gameData || !gameData.players || !turnStartTime) {
+                document.getElementById('board-title').textContent = 'BUSINESS';
+                return;
+            }
+            
+            const currentPlayer = gameData.players[gameData.currentPlayerIndex];
+            if (!currentPlayer || currentPlayer.isBot) {
+                document.getElementById('board-title').textContent = 'BUSINESS';
+                return;
+            }
+            
+            const elapsed = Math.floor((Date.now() - turnStartTime) / 1000);
+            const remaining = Math.max(0, 90 - elapsed);
+            
+            document.getElementById('board-title').textContent = `${currentPlayer.name} - ${remaining}s`;
+        }
+
         function updateGameUI() {
             updatePlayersInfo();
             updateBoardPiecesAndHouses();
             updateControls();
             updateGameLog();
+            updateBoardTitle();
             
             // ⏰ Handle turn timer for auto-end turn
             handleTurnTimer();
@@ -3419,23 +3440,45 @@ padding-bottom: 20;
             const currentPlayer = gameData.players[gameData.currentPlayerIndex];
             const isMyTurn = currentPlayer && currentPlayer.id === localPlayer.id;
             
-            // Clear existing timer
+            // Clear existing timer and interval
             if (turnTimer) {
                 clearTimeout(turnTimer);
                 turnTimer = null;
             }
+            if (turnUpdateInterval) {
+                clearInterval(turnUpdateInterval);
+                turnUpdateInterval = null;
+            }
+            turnStartTime = null;
             
             // Start timer if it's our turn and we're not a bot
             if (isMyTurn && !currentPlayer.isBot) {
                 console.log('⏰ Starting turn timer (90 seconds)');
+                turnStartTime = Date.now();
                 turnTimer = setTimeout(() => {
                     console.log('⏰ Turn timer expired, auto-ending turn');
+                    // Clear interval
+                    if (turnUpdateInterval) {
+                        clearInterval(turnUpdateInterval);
+                        turnUpdateInterval = null;
+                    }
+                    turnStartTime = null;
+                    // Reset board title
+                    document.getElementById('board-title').textContent = 'BUSINESS';
                     // Auto-end turn
                     sendMessage({
                         type: 'end_turn',
                         gameId: currentGameId
                     });
                 }, 90000); // 1.5 minutes = 90 seconds
+                
+                // Start interval to update board title every second
+                turnUpdateInterval = setInterval(() => {
+                    updateBoardTitle();
+                }, 1000);
+            } else {
+                // Not our turn or bot, reset title
+                document.getElementById('board-title').textContent = 'BUSINESS';
             }
         }
 
@@ -3512,7 +3555,6 @@ padding-bottom: 20;
         }
         
         function showGameManagementModal() {
-            const modal = document.getElementById('game-management-modal');
             const playersContainer = document.getElementById('game-management-players');
             
             playersContainer.innerHTML = gameData.players.map(p => `
@@ -7209,854 +7251,6 @@ padding-bottom: 20;
             <button id="closeManagementModal" class="w-full bg-gray-500 text-white p-2 rounded">Close</button>
         </div>
     </div>
-FLO WAS HERE BITCH
-    <!-- ==================== -->
-<!-- YAPAY ZEKALI BOT SİSTEMİ -->
-<!-- ==================== -->
-<script>
-// === YAPAY ZEKA SİSTEMİ === //
-class BotAI {
-    constructor(bot) {
-        this.bot = bot;
-        this.memory = {
-            playerBehavior: [],
-            marketTrends: [],
-            successfulTrades: [],
-            failedTrades: []
-        };
-        this.learningRate = 0.1;
-    }
 
-    // Karar ağacı analizi
-    analyzeDecision(property, context) {
-        const factors = {
-            // Finansal faktörler
-            financialHealth: this.calculateFinancialHealth(),
-            propertyValue: this.calculateTruePropertyValue(property),
-            marketPosition: this.analyzeMarketPosition(),
-            
-            // Stratejik faktörler
-            strategicValue: this.calculateStrategicValue(property),
-            riskAssessment: this.assessRisk(property, context),
-            opportunityCost: this.calculateOpportunityCost(property),
-            
-            // Psikolojik faktörler
-            confidence: this.calculateConfidence(),
-            patience: this.calculatePatience()
-        };
-
-        return this.weightedDecision(factors);
-    }
-
-    calculateFinancialHealth() {
-        const cashRatio = this.bot.money / (this.bot.properties.length * 1000 + 1000);
-        const debtPressure = this.bot.money < 2000 ? 0.8 : 0.2;
-        return Math.min(1, cashRatio - debtPressure);
-    }
-
-    calculateTruePropertyValue(property) {
-        let value = property.price || 1000;
-        
-        // Temel değerleme
-        value += (property.investment || 0) * 1.3;
-        value += (property.rent || 100) * 20; // 20 tur kira geliri
-        
-        // Stratejik değer
-        if (property.group) {
-            const groupProps = this.getPropertiesInGroup(property.group);
-            const ownedProps = groupProps.filter(p => p.owner === this.bot.id).length;
-            const monopolyPotential = ownedProps / groupProps.length;
-            value += monopolyPotential * 2000;
-        }
-        
-        // Konum değeri
-        const locationValue = this.calculateLocationValue(property);
-        value += locationValue;
-        
-        return value;
-    }
-
-    calculateStrategicValue(property) {
-        let strategicScore = 0;
-        
-        // Monopol potansiyeli
-        if (property.group) {
-            const groupProps = this.getPropertiesInGroup(property.group);
-            const ownedProps = groupProps.filter(p => p.owner === this.bot.id).length;
-            strategicScore += (ownedProps / groupProps.length) * 0.6;
-        }
-        
-        // Rakip blokajı
-        strategicScore += this.calculateBlockageValue(property) * 0.4;
-        
-        return strategicScore;
-    }
-
-    calculateBlockageValue(property) {
-        // Bu mülkü alarak rakipleri ne kadar bloke ediyor?
-        let blockageScore = 0;
-        const opponents = this.getOpponents();
-        
-        opponents.forEach(opponent => {
-            if (opponent.properties.some(p => p.group === property.group)) {
-                blockageScore += 0.3;
-            }
-        });
-        
-        return Math.min(1, blockageScore);
-    }
-
-    assessRisk(property, context) {
-        let risk = 0.5; // Temel risk
-        
-        // Finansal risk
-        const investmentRatio = (property.price || 1000) / this.bot.money;
-        risk += investmentRatio * 0.3;
-        
-        // Pazar riski
-        const marketSaturation = this.calculateMarketSaturation();
-        risk += marketSaturation * 0.2;
-        
-        // Rakip riski
-        const opponentThreat = this.assessOpponentThreat();
-        risk += opponentThreat * 0.2;
-        
-        return Math.min(1, risk);
-    }
-
-    calculateOpportunityCost(property) {
-        // Bu mülke yatırım yaparsak başka fırsatları kaçırır mıyız?
-        const alternativeOpportunities = this.findAlternativeOpportunities();
-        const propertyCost = property.price || 1000;
-        
-        return Math.min(1, propertyCost / (this.bot.money * 0.5));
-    }
-
-    weightedDecision(factors) {
-        const weights = {
-            financialHealth: 0.25,
-            propertyValue: 0.20,
-            strategicValue: 0.15,
-            riskAssessment: 0.15,
-            opportunityCost: 0.10,
-            marketPosition: 0.10,
-            confidence: 0.05
-        };
-
-        let score = 0;
-        for (const [factor, weight] of Object.entries(weights)) {
-            score += factors[factor] * weight;
-        }
-
-        return {
-            score: score,
-            decision: score > 0.6 ? 'AGGRESSIVE' : score > 0.4 ? 'NEUTRAL' : 'CAUTIOUS',
-            confidence: Math.abs(score - 0.5) * 2
-        };
-    }
-
-    // Auction AI'si
-    analyzeAuction(auction) {
-        const property = auction.property;
-        const currentBid = auction.currentBid || auction.startingPrice;
-        const trueValue = this.calculateTruePropertyValue(property);
-        
-        const analysis = {
-            valueRatio: trueValue / currentBid,
-            biddingAggression: this.calculateBiddingAggression(auction),
-            maxBid: trueValue * (1.1 + this.bot.personality.aggression * 0.3),
-            shouldBid: false,
-            bidAmount: 0
-        };
-
-        // Bidding stratejisi
-        if (analysis.valueRatio > 1.2 && currentBid < analysis.maxBid) {
-            analysis.shouldBid = true;
-            analysis.bidAmount = this.calculateOptimalBid(currentBid, analysis.maxBid);
-        }
-
-        return analysis;
-    }
-
-    calculateBiddingAggression(auction) {
-        const timeInAuction = (Date.now() - auction.startedAt) / 1000 / 60; // dakika
-        const bidCount = auction.bidHistory ? auction.bidHistory.length : 0;
-        
-        return Math.min(1, (timeInAuction * 0.1) + (bidCount * 0.05));
-    }
-
-    calculateOptimalBid(currentBid, maxBid) {
-        const margin = maxBid - currentBid;
-        const aggression = this.bot.personality.aggression;
-        
-        // Agresif botlar daha yüksek, temkinliler daha düşük teklif verir
-        return currentBid + (margin * (0.1 + aggression * 0.3));
-    }
-
-    // Trade offer AI'si
-    analyzeTradeOffer(offer) {
-        const property = offer.property;
-        const offeredPrice = offer.price;
-        const trueValue = this.calculateTruePropertyValue(property);
-        
-        const analysis = {
-            profitRatio: offeredPrice / trueValue,
-            counterOfferPotential: this.shouldCounterOffer(offer),
-            minAcceptablePrice: trueValue * 1.5, // Minimum %50 kar
-            counterOfferPrice: 0
-        };
-
-        // Counter offer stratejisi
-        if (analysis.profitRatio > 0.8 && analysis.profitRatio < 1.5) {
-            analysis.counterOfferPrice = trueValue * (1.5 + Math.random() * 0.5);
-        }
-
-        return analysis;
-    }
-
-    shouldCounterOffer(offer) {
-        const buyer = offer.buyer;
-        const buyerFinancials = this.estimateBuyerFinancials(buyer);
-        
-        return buyerFinancials.estimatedMoney > offer.price * 1.2;
-    }
-
-    estimateBuyerFinancials(buyer) {
-        // Basit finansal tahmin
-        return {
-            estimatedMoney: buyer.money || 5000,
-            spendingHabit: this.analyzeSpendingHabit(buyer),
-            riskTolerance: 0.5
-        };
-    }
-
-    analyzeSpendingHabit(buyer) {
-        if (!buyer.properties) return 'MODERATE';
-        const spendingRatio = buyer.properties.length / (buyer.money / 1000);
-        
-        if (spendingRatio > 2) return 'AGGRESSIVE';
-        if (spendingRatio > 1) return 'MODERATE';
-        return 'CAUTIOUS';
-    }
-
-    // Yardımcı fonksiyonlar
-    getPropertiesInGroup(group) {
-        if (!window.game || !window.game.squares) return [];
-        return window.game.squares.filter(sq => sq.group === group);
-    }
-
-    getOpponents() {
-        if (!window.game || !window.game.players) return [];
-        return window.game.players.filter(p => p.id !== this.bot.id && p.isPlayer !== false);
-    }
-
-    calculateMarketSaturation() {
-        if (!window.game || !window.game.squares) return 0.5;
-        const totalProperties = window.game.squares.filter(sq => sq.owner).length;
-        const totalSquares = window.game.squares.length;
-        return totalProperties / totalSquares;
-    }
-
-    assessOpponentThreat() {
-        const opponents = this.getOpponents();
-        if (opponents.length === 0) return 0;
-        
-        let totalThreat = 0;
-        opponents.forEach(opponent => {
-            const opponentStrength = (opponent.money || 0) / 1000 + (opponent.properties?.length || 0);
-            totalThreat += opponentStrength;
-        });
-        
-        return Math.min(1, totalThreat / (opponents.length * 5));
-    }
-
-    calculateLocationValue(property) {
-        // Merkeze yakınlık değeri
-        const centerX = 400, centerY = 300;
-        const distance = Math.sqrt(Math.pow(property.x - centerX, 2) + Math.pow(property.y - centerY, 2));
-        return Math.max(0, 500 - distance * 2);
-    }
-
-    calculateConfidence() {
-        const winRate = this.calculateRecentWinRate();
-        const financialStability = this.bot.money > 3000 ? 0.8 : 0.3;
-        return (winRate + financialStability) / 2;
-    }
-
-    calculatePatience() {
-        const gameDuration = this.getGameDuration();
-        return Math.min(1, gameDuration / 300); // 5 dakikada maksimum patience
-    }
-
-    calculateRecentWinRate() {
-        if (this.memory.successfulTrades.length + this.memory.failedTrades.length === 0) return 0.5;
-        return this.memory.successfulTrades.length / (this.memory.successfulTrades.length + this.memory.failedTrades.length);
-    }
-
-    getGameDuration() {
-        return (Date.now() - (window.gameStartTime || Date.now())) / 1000;
-    }
-
-    // Öğrenme mekanizması
-    learnFromExperience(decision, outcome) {
-        if (outcome.success) {
-            this.memory.successfulTrades.push({
-                decision: decision,
-                context: outcome.context,
-                timestamp: Date.now()
-            });
-        } else {
-            this.memory.failedTrades.push({
-                decision: decision,
-                context: outcome.context,
-                timestamp: Date.now()
-            });
-        }
-        
-        // Eski deneyimleri temizle (son 50 deneyim)
-        this.memory.successfulTrades = this.memory.successfulTrades.slice(-25);
-        this.memory.failedTrades = this.memory.failedTrades.slice(-25);
-    }
-}
-
-// === YAPAY ZEKALI BOT === //
-class AIGameBot {
-    constructor(x, y, name = "AI Bot") {
-        this.x = x;
-        this.y = y;
-        this.name = name;
-        this.speed = 2;
-        this.targetX = x;
-        this.targetY = y;
-        this.isActive = true;
-        this.color = name === "Kivi AI" ? '#FF6B6B' : '#4ECDC4';
-        this.size = 15;
-        this.isMoving = false;
-        this.moveCooldown = 0;
-
-        // Ekonomi
-        this.money = name === "Kivi AI" ? 12000 : 8000;
-        this.properties = [];
-        this.id = 'ai_bot_' + Math.random().toString(36).substr(2, 9);
-        this.isPlayer = false;
-
-        // Yapay Zeka
-        this.ai = new BotAI(this);
-        this.personality = {
-            aggression: name === "Kivi AI" ? 0.8 : 0.4,
-            learningSpeed: 0.7,
-            adaptability: 0.6
-        };
-
-        this.currentStrategy = 'BALANCED';
-        this.lastActions = [];
-    }
-
-    update(playerX, playerY) {
-        if (!this.isActive) return;
-        if (this.moveCooldown > 0) {
-            this.moveCooldown--;
-            return;
-        }
-        if (!this.isMoving) return;
-
-        if (Math.abs(this.x - this.targetX) < 2 && Math.abs(this.y - this.targetY) < 2) {
-            this.isMoving = false;
-            this.x = this.targetX;
-            this.y = this.targetY;
-            this.handleSquareAction();
-            return;
-        }
-
-        let dx = this.targetX - this.x;
-        let dy = this.targetY - this.y;
-        let distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance > 0) {
-            this.x += (dx / distance) * this.speed;
-            this.y += (dy / distance) * this.speed;
-        }
-
-        this.x = Math.max(this.size, Math.min(800 - this.size, this.x));
-        this.y = Math.max(this.size, Math.min(600 - this.size, this.y));
-    }
-
-    handleSquareAction() {
-        console.log(`🧠 ${this.name} AI analiz yapıyor...`);
-        
-        const gameSquare = this.findGameSquare();
-        if (gameSquare) {
-            this.aiProcessSquare(gameSquare);
-        }
-    }
-
-    aiProcessSquare(square) {
-        const context = {
-            square: square,
-            gameState: this.getGameState(),
-            botState: this.getBotState()
-        };
-
-        const decision = this.ai.analyzeDecision(square, context);
-        
-        console.log(`🤖 ${this.name} KARAR: ${decision.decision} (Güven: ${(decision.confidence * 100).toFixed(1)}%)`);
-
-        switch(decision.decision) {
-            case 'AGGRESSIVE':
-                this.executeAggressiveAction(square, decision);
-                break;
-            case 'NEUTRAL':
-                this.executeNeutralAction(square, decision);
-                break;
-            case 'CAUTIOUS':
-                this.executeCautiousAction(square, decision);
-                break;
-        }
-    }
-
-    executeAggressiveAction(square, decision) {
-        if (!square.owner) {
-            // Saldırgan satın alma
-            if (this.money >= square.price && decision.confidence > 0.7) {
-                this.executeBuyProperty(square);
-            }
-        } else if (square.owner === this.id) {
-            // Agresif yatırım
-            this.executeInvestment(square, 0.75); // %75 yatırım
-        } else {
-            // Agresif teklif
-            this.executeAIOffer(square, 1.3); // %30 premium
-        }
-    }
-
-    executeNeutralAction(square, decision) {
-        if (!square.owner) {
-            if (this.money >= square.price && decision.confidence > 0.5) {
-                this.executeBuyProperty(square);
-            }
-        } else if (square.owner === this.id) {
-            this.executeInvestment(square, 0.5); // %50 yatırım
-        } else {
-            this.executeAIOffer(square, 1.1); // %10 premium
-        }
-    }
-
-    executeCautiousAction(square, decision) {
-        if (!square.owner) {
-            if (this.money >= square.price && decision.confidence > 0.8) {
-                this.executeBuyProperty(square);
-            }
-        } else if (square.owner === this.id) {
-            this.executeInvestment(square, 0.25); // %25 yatırım
-        }
-        // Temkinli bot teklif vermez
-    }
-
-    executeAIOffer(property, premium = 1.1) {
-        const owner = this.findPropertyOwner(property);
-        if (!owner) return;
-
-        const propertyValue = this.ai.calculateTruePropertyValue(property);
-        const offerPrice = Math.floor(propertyValue * premium);
-        
-        if (this.money >= offerPrice) {
-            console.log(`🤖 ${this.name} AKILLI TEKLİF: $${offerPrice} (${((premium - 1) * 100).toFixed(1)}% premium)`);
-            this.executeMakeOffer(property, owner, offerPrice);
-        }
-    }
-
-    // AI Auction analizi
-    participateInAuction(auction) {
-        const analysis = this.ai.analyzeAuction(auction);
-        
-        console.log(`🎪 ${this.name} AUCTION ANALİZ: Değer Oranı: ${analysis.valueRatio.toFixed(2)}`);
-        
-        if (analysis.shouldBid && analysis.bidAmount <= this.money) {
-            console.log(`🧠 ${this.name} AKILLI BID: $${analysis.bidAmount}`);
-            this.placeBid(auction, analysis.bidAmount);
-        }
-    }
-
-    // AI Trade offer değerlendirme
-    evaluateIncomingOffer(offer) {
-        const analysis = this.ai.analyzeTradeOffer(offer);
-        
-        console.log(`💰 ${this.name} TEKLİF ANALİZ: Kar Oranı: ${analysis.profitRatio.toFixed(2)}`);
-        
-        if (analysis.profitRatio >= 1.5) {
-            console.log(`✅ ${this.name} KARLI TEKLİFİ KABUL: %${((analysis.profitRatio - 1) * 100).toFixed(1)} kar`);
-            this.acceptOffer(offer);
-            return true;
-        } else if (analysis.counterOfferPotential) {
-            console.log(`🔄 ${this.name} COUNTER OFFER: $${analysis.counterOfferPrice}`);
-            this.makeCounterOffer(offer, analysis.counterOfferPrice);
-            return false;
-        } else {
-            console.log(`❌ ${this.name} KARSIZ TEKLİFİ RED: %${((analysis.profitRatio - 1) * 100).toFixed(1)} kar`);
-            return false;
-        }
-    }
-
-    makeCounterOffer(originalOffer, counterPrice) {
-        const counterOffer = {
-            ...originalOffer,
-            price: counterPrice,
-            isCounterOffer: true,
-            originalOffer: originalOffer
-        };
-        
-        if (window.game && window.game.makeOffer) {
-            window.game.makeOffer(counterOffer);
-        }
-    }
-
-    // Geri kalan fonksiyonlar...
-    findGameSquare() {
-        if (window.game && window.game.squares) {
-            for (let square of window.game.squares) {
-                const distance = Math.sqrt((square.x - this.x) ** 2 + (square.y - this.y) ** 2);
-                if (distance < 50) return square;
-            }
-        }
-        return null;
-    }
-
-    executeBuyProperty(property) {
-        this.money -= property.price;
-        property.owner = this.id;
-        this.properties.push(property);
-        console.log(`🏠 ${this.name} AKILLI SATIN ALMA: $${property.price}`);
-    }
-
-    executeInvestment(property, percentage) {
-        const amount = Math.floor(property.price * percentage);
-        if (this.money >= amount) {
-            this.money -= amount;
-            property.investment = (property.investment || 0) + amount;
-            console.log(`💰 ${this.name} AKILLI YATIRIM: %${percentage * 100} - $${amount}`);
-        }
-    }
-
-    executeMakeOffer(property, owner, price) {
-        if (window.game && window.game.makeOffer) {
-            window.game.makeOffer({
-                property: property,
-                buyer: this,
-                seller: owner,
-                price: price
-            });
-        }
-    }
-
-    placeBid(auction, amount) {
-        if (window.game && window.game.placeBid) {
-            window.game.placeBid(auction, this, amount);
-        }
-    }
-
-    acceptOffer(offer) {
-        const property = offer.property;
-        const buyer = offer.buyer;
-        const price = offer.price;
-        
-        this.money += price;
-        if (buyer.money !== undefined) buyer.money -= price;
-        
-        this.properties = this.properties.filter(p => p !== property);
-        property.owner = buyer.id;
-        if (buyer.properties) buyer.properties.push(property);
-    }
-
-    findPropertyOwner(property) {
-        if (window.game && window.game.players) {
-            return window.game.players.find(p => p.id === property.owner || p === property.owner);
-        }
-        return null;
-    }
-
-    getGameState() {
-        return {
-            totalPlayers: window.game?.players?.length || 1,
-            marketTrend: this.ai.calculateMarketSaturation(),
-            gameDuration: this.ai.getGameDuration()
-        };
-    }
-
-    getBotState() {
-        return {
-            money: this.money,
-            properties: this.properties.length,
-            financialHealth: this.ai.calculateFinancialHealth(),
-            confidence: this.ai.calculateConfidence()
-        };
-    }
-
-    startTurn() {
-        if (!this.isActive) return;
-        
-        this.isMoving = true;
-        this.moveCooldown = 30;
-        this.chooseAITarget();
-        
-        console.log(`🧠 ${this.name} SIRASI! AI Mod: ${this.currentStrategy}`);
-    }
-
-    chooseAITarget() {
-        // AI stratejisine göre hedef seç
-        const strategicTarget = this.calculateStrategicTarget();
-        this.targetX = strategicTarget.x;
-        this.targetY = strategicTarget.y;
-    }
-
-    calculateStrategicTarget() {
-        // Mevcut stratejiye göre en iyi hedefi bul
-        if (this.currentStrategy === 'AGGRESSIVE') {
-            return this.findHighValueTarget();
-        } else if (this.currentStrategy === 'EXPANSION') {
-            return this.findExpansionTarget();
-        } else {
-            return this.findBalancedTarget();
-        }
-    }
-
-    findHighValueTarget() {
-        // Yüksek değerli mülklere yönel
-        if (window.game && window.game.squares) {
-            const valuableSquares = window.game.squares
-                .filter(sq => !sq.owner || sq.owner !== this.id)
-                .sort((a, b) => (b.price || 0) - (a.price || 0));
-            
-            if (valuableSquares.length > 0) {
-                return { x: valuableSquares[0].x, y: valuableSquares[0].y };
-            }
-        }
-        return { x: 400 + (Math.random() - 0.5) * 300, y: 300 + (Math.random() - 0.5) * 200 };
-    }
-
-    findExpansionTarget() {
-        // Grup tamamlamaya yönelik hedefler
-        if (window.game && window.game.squares) {
-            for (let square of window.game.squares) {
-                if (square.group && !square.owner) {
-                    const groupProps = this.ai.getPropertiesInGroup(square.group);
-                    const ownedInGroup = groupProps.filter(p => p.owner === this.id).length;
-                    if (ownedInGroup > 0) {
-                        return { x: square.x, y: square.y };
-                    }
-                }
-            }
-        }
-        return this.findBalancedTarget();
-    }
-
-    findBalancedTarget() {
-        return { 
-            x: 400 + (Math.random() - 0.5) * 200, 
-            y: 300 + (Math.random() - 0.5) * 150 
-        };
-    }
-
-    endTurn() {
-        this.isMoving = false;
-        this.updateStrategy();
-    }
-
-    updateStrategy() {
-        // Oyun durumuna göre strateji güncelle
-        const financialHealth = this.ai.calculateFinancialHealth();
-        const marketPosition = this.ai.analyzeMarketPosition();
-        
-        if (financialHealth > 0.7 && marketPosition > 0.6) {
-            this.currentStrategy = 'AGGRESSIVE';
-        } else if (financialHealth < 0.3) {
-            this.currentStrategy = 'CAUTIOUS';
-        } else {
-            this.currentStrategy = 'BALANCED';
-        }
-    }
-
-    draw(ctx) {
-        if (!this.isActive) return;
-
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-
-        if (this.isMoving) {
-            ctx.strokeStyle = 'yellow';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.size + 5, 0, Math.PI * 2);
-            ctx.stroke();
-        }
-
-        // AI göstergesi
-        ctx.fillStyle = 'white';
-        ctx.font = '10px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(this.name, this.x, this.y - 25);
-        ctx.fillText(`$${this.money}`, this.x, this.y - 40);
-        ctx.fillText(this.currentStrategy, this.x, this.y - 55);
-
-        if (this.isMoving) {
-            ctx.fillStyle = 'yellow';
-            ctx.font = '8px Arial';
-            ctx.fillText('AI THINKING', this.x, this.y - 70);
-        }
-    }
-}
-
-// === YAPAY ZEKA BOT MANAGER === //
-class AIBotManager {
-    constructor() {
-        this.bots = [];
-        this.currentBotIndex = 0;
-        this.isBotTurn = false;
-        this.turnTimer = 0;
-        this.activeAuctions = [];
-    }
-
-    initialize() {
-        const botNames = ["Kivi AI", "Lef AI"];
-        
-        for (let i = 0; i < botNames.length; i++) {
-            const x = 150 + (i * 500);
-            const y = 300;
-            const bot = new AIGameBot(x, y, botNames[i]);
-            this.bots.push(bot);
-        }
-        
-        this.integrateWithGame();
-        console.log('🧠 YAPAY ZEKA BOT SİSTEMİ AKTİF!');
-        console.log('🤖 Kivi AI - Derin Öğrenme');
-        console.log('🤖 Lef AI - Stratejik Planlama');
-    }
-
-    integrateWithGame() {
-        // Auction sistemine bağlan
-        const originalStartAuction = window.game?.startAuction;
-        window.game.startAuction = (auctionData) => {
-            this.activeAuctions.push({...auctionData, startedAt: Date.now()});
-            
-            // Botları auction'a katılmaya davet et
-            this.bots.forEach(bot => {
-                if (bot.id !== auctionData.seller.id) {
-                    setTimeout(() => bot.participateInAuction(auctionData), 1000);
-                }
-            });
-            
-            if (originalStartAuction) originalStartAuction(auctionData);
-        };
-
-        // Offer sistemine bağlan
-        const originalMakeOffer = window.game?.makeOffer;
-        window.game.makeOffer = (offerData) => {
-            if (offerData.seller && offerData.seller.isPlayer === false) {
-                setTimeout(() => {
-                    const targetBot = this.bots.find(bot => bot.id === offerData.seller.id);
-                    if (targetBot) targetBot.evaluateIncomingOffer(offerData);
-                }, 1500);
-            }
-            
-            if (originalMakeOffer) originalMakeOffer(offerData);
-        };
-    }
-
-    update(playerX, playerY) {
-        if (!this.isBotTurn) return;
-
-        this.turnTimer++;
-        
-        const currentBot = this.bots[this.currentBotIndex];
-        if (currentBot) {
-            currentBot.update(playerX, playerY);
-            
-            if (!currentBot.isMoving && this.turnTimer > 60) {
-                this.endCurrentTurn();
-            }
-        }
-    }
-
-    startBotTurn() {
-        if (this.bots.length === 0) return;
-        
-        this.isBotTurn = true;
-        this.turnTimer = 0;
-        
-        const currentBot = this.bots[this.currentBotIndex];
-        if (currentBot) {
-            currentBot.startTurn();
-        }
-    }
-
-    endCurrentTurn() {
-        const currentBot = this.bots[this.currentBotIndex];
-        if (currentBot) {
-            currentBot.endTurn();
-        }
-        
-        this.isBotTurn = false;
-        this.currentBotIndex = (this.currentBotIndex + 1) % this.bots.length;
-        
-        if (window.game && window.game.player) {
-            window.game.player.canMove = true;
-        }
-    }
-
-    draw(ctx) {
-        this.bots.forEach(bot => bot.draw(ctx));
-    }
-}
-
-// === YAPAY ZEKA SİSTEMİNİ BAŞLAT === //
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function() {
-        if (window.game) {
-            window.game.aiBotManager = new AIBotManager();
-            window.game.aiBotManager.initialize();
-            
-            if (!window.game.players) window.game.players = [];
-            window.game.players.push(...window.game.aiBotManager.bots);
-            
-            // Oyun entegrasyonu
-            if (window.game.player) {
-                const originalUpdate = window.game.player.update;
-                window.game.player.update = function() {
-                    if (originalUpdate) originalUpdate.call(this);
-                    
-                    if (this.canMove && !this.isMoving && 
-                        window.game.aiBotManager && !window.game.aiBotManager.isBotTurn) {
-                        this.canMove = false;
-                        setTimeout(() => window.game.aiBotManager.startBotTurn(), 1500);
-                    }
-                };
-            }
-            
-            const originalUpdate = window.game.update;
-            window.game.update = function() {
-                if (originalUpdate) originalUpdate.call(this);
-                if (this.aiBotManager && this.player) {
-                    this.aiBotManager.update(this.player.x, this.player.y);
-                }
-            };
-            
-            const originalDraw = window.game.draw;
-            window.game.draw = function() {
-                if (originalDraw) originalDraw.call(this);
-                if (this.aiBotManager && this.ctx) {
-                    this.aiBotManager.draw(this.ctx);
-                }
-            };
-            
-            console.log('🚀 YAPAY ZEKA SİSTEMİ HAZIR!');
-            console.log('🎯 Botlar artık derin analiz yapacak');
-            console.log('💰 Akıllı karar mekanizması aktif');
-            console.log('🧠 Öğrenme ve adaptasyon özellikleri açık');
-        }
-    }, 3000);
-});
-</script>
 </body>
 </html>
-
