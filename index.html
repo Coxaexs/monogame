@@ -1991,7 +1991,9 @@ padding-bottom: 20;
                     // 🤖 Bot AI - if current player is a bot, make it move automatically
                     if (gameData.state === 'playing' && gameData.players && gameData.players[gameData.currentPlayerIndex] && 
                         gameData.players[gameData.currentPlayerIndex].id.startsWith('bot_') && 
-                        gameData.players[gameData.currentPlayerIndex].id !== localPlayer.id) {
+                        gameData.players[gameData.currentPlayerIndex].id !== localPlayer.id &&
+                        !window.isBotTurnInProgress) {
+                        window.isBotTurnInProgress = true;
                         setTimeout(() => botTurn(), 1500); // Delay for better UX
                     }
                     
@@ -4439,7 +4441,7 @@ padding-bottom: 20;
             // Check for extra turn from doubles (only if doubles rule is enabled)
             if (gameData.allowDoubles && gameData.players[gameData.currentPlayerIndex].doublesCount > 0) {
                 nextPlayerIndex = gameData.currentPlayerIndex;
-                playersCopy[gameData.currentPlayerIndex].doublesCount = 0;
+                botPlayersCopy[gameData.currentPlayerIndex].doublesCount = 0;
             } else {
                 // Skip bankrupt players
                 while(gameData.players[nextPlayerIndex].isBankrupt) {
@@ -4449,13 +4451,13 @@ padding-bottom: 20;
             
             // Reset doubles count when moving to next player
             if (nextPlayerIndex !== gameData.currentPlayerIndex) {
-                playersCopy[gameData.currentPlayerIndex].doublesCount = 0;
+                botPlayersCopy[gameData.currentPlayerIndex].doublesCount = 0;
             }
             
             // ⏭️ Check if next player should skip their turn (from Skip Joker Card)
-            if (playersCopy[nextPlayerIndex].skipNextTurn) {
-                playersCopy[nextPlayerIndex].skipNextTurn = false;
-                const skippedPlayerName = playersCopy[nextPlayerIndex].name;
+            if (botPlayersCopy[nextPlayerIndex].skipNextTurn) {
+                botPlayersCopy[nextPlayerIndex].skipNextTurn = false;
+                const skippedPlayerName = botPlayersCopy[nextPlayerIndex].name;
                 
                 // Move to the player after the skipped one
                 nextPlayerIndex = (nextPlayerIndex + 1) % gameData.players.length;
@@ -4467,21 +4469,25 @@ padding-bottom: 20;
                 
                 await updateGame({
                     currentPlayerIndex: nextPlayerIndex,
-                    players: playersCopy,
+                    players: botPlayersCopy,
                     turnState: 'start',
                     lastDiceRoll: [0, 0],
                     gameLog: [...gameData.gameLog, `⏭️ ${skippedPlayerName}'s turn was skipped!`, `It's now ${gameData.players[nextPlayerIndex].name}'s turn.`]
                 });
+                
+                window.isBotTurnInProgress = false;
                 return;
             }
             
             await updateGame({
                 currentPlayerIndex: nextPlayerIndex,
-                players: playersCopy,
+                players: botPlayersCopy,
                 turnState: 'start',
                 lastDiceRoll: [0, 0],
                 gameLog: [...gameData.gameLog, `It's now ${gameData.players[nextPlayerIndex].name}'s turn.`]
             });
+            
+            window.isBotTurnInProgress = false;
         }
         
         async function buyProperty(position) {
