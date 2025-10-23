@@ -166,6 +166,9 @@ wss.on('connection', (ws, req) => {
                 case 'join_game':
                     handleJoinGame(ws, message);
                     break;
+                case 'rejoin_game':
+                    handleRejoinGame(ws, message);
+                    break;
                 case 'start_game':
                     handleStartGame(ws, message);
                     break;
@@ -283,6 +286,65 @@ function handleJoinGame(ws, message) {
     }, ws.clientId);
     
     console.log(`👤 Player ${player.name} joined game ${gameId}`);
+}
+
+function handleRejoinGame(ws, message) {
+    const { gameId, playerId } = message;
+    const game = games.get(gameId);
+    
+    if (!game) {
+        ws.send(JSON.stringify({ 
+            type: 'error', 
+            message: 'Game not found. The game may have ended.' 
+        }));
+        return;
+    }
+    
+    // Find the player in the game
+    const player = game.players.find(p => p.id === playerId);
+    
+    if (!player) {
+        ws.send(JSON.stringify({ 
+            type: 'error', 
+            message: 'Player not found in this game. You may have been removed.' 
+        }));
+        return;
+    }
+    
+    if (player.isBankrupt) {
+        ws.send(JSON.stringify({ 
+            type: 'error', 
+            message: 'Cannot rejoin - you are bankrupt in this game.' 
+        }));
+        return;
+    }
+    
+    // Reconnect the websocket
+    ws.gameId = gameId;
+    ws.playerId = playerId;
+    
+    // Send successful reconnection
+    ws.send(JSON.stringify({
+        type: 'game_joined',
+        gameId,
+        game,
+        reconnected: true
+    }));
+    
+    // Send updated game state
+    ws.send(JSON.stringify({
+        type: 'game_updated',
+        game
+    }));
+    
+    console.log(`🔄 Player ${player.name} (${playerId}) reconnected to game ${gameId}`);
+    
+    // Notify other players
+    broadcastToGame(gameId, {
+        type: 'player_reconnected',
+        playerName: player.name,
+        playerId: playerId
+    }, ws.clientId);
 }
 
 function handleStartGame(ws, message) {
