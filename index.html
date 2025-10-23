@@ -3510,7 +3510,7 @@ padding-bottom: 20;
                             ${p.inJail ? `<div class="text-red-500 font-bold text-sm flex items-center gap-1">🔒 IN JAIL</div>` : '<div></div>'}
                             <div class="flex gap-2">
                                 ${p.id === localPlayer.id && p.money < 0 ? `<button onclick="window.declareBankruptcy()" class="text-xs bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1 rounded-lg hover:from-red-600 hover:to-red-700 shadow transition-all">💥 İflas Et</button>` : ''}
-                                ${p.id !== localPlayer.id && gameData.settings.allowTrading ? `<button data-player-id="${p.id}" onclick="window.showTradeModal('${p.id}')" class="trade-btn text-xs bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-lg hover:from-blue-600 hover:to-blue-700 shadow transition-all">🤝 Trade</button>` : ''}
+                                ${p.id !== localPlayer.id && gameData.settings.allowTrading && !p.isBot ? `<button data-player-id="${p.id}" onclick="window.showTradeModal('${p.id}')" class="trade-btn text-xs bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-lg hover:from-blue-600 hover:to-blue-700 shadow transition-all">🤝 Trade</button>` : ''}
                                 ${p.id === gameData.hostId && localPlayer.id === gameData.hostId ? `<button onclick="showGameManagementModal()" class="text-xs bg-gradient-to-r from-purple-500 to-purple-600 text-white px-3 py-1 rounded-lg hover:from-purple-600 hover:to-purple-700 shadow transition-all">🎮 Oyun Yönetimi</button>` : ''}
                             </div>
                         </div>
@@ -4653,6 +4653,7 @@ padding-bottom: 20;
             const availablePartners = gameData.players.filter(p => 
                 p.id !== currentPlayer.id && 
                 !p.isBankrupt && 
+                !p.isBot &&
                 p.money >= remainingCost
             );
             
@@ -4720,6 +4721,12 @@ padding-bottom: 20;
             const currentPlayer = gameData.players[gameData.currentPlayerIndex];
             const partner = gameData.players.find(p => p.id === partnerId);
             
+            // Don't send partnership requests to bots
+            if (partner && partner.isBot) {
+                showModal('Cannot Send Partnership', 'You cannot send partnership requests to bot players.', [{text: 'OK', class: 'bg-gray-500', action: hideModal}]);
+                return;
+            }
+            
             const partnerSharePercentage = 100 - mySharePercentage;
             const myCost = Math.floor(space.price * (mySharePercentage / 100));
             const partnerCost = Math.floor(space.price * (partnerSharePercentage / 100));
@@ -4759,21 +4766,29 @@ padding-bottom: 20;
         
         // 📬 Check for Partnership Requests
         function checkPartnershipRequests() {
+            console.log('🔍 Checking partnership requests for player:', localPlayer.id, 'isBot:', localPlayer.isBot);
             if (!gameData || !gameData.partnershipRequests) return;
             
             const myRequests = gameData.partnershipRequests.filter(req => 
                 req.partnerId === localPlayer.id && req.status === 'pending'
             );
             
+            console.log('📋 My partnership requests:', myRequests.length);
+            
             if (myRequests.length > 0) {
                 const latestRequest = myRequests[myRequests.length - 1];
+                console.log('🎯 Latest request:', latestRequest);
                 
                 // Check if the current player (who might be receiving this request) is a bot
                 const currentPlayer = gameData.players[gameData.currentPlayerIndex];
+                console.log('👤 Current player:', currentPlayer.name, 'isBot:', currentPlayer.isBot, 'localPlayer:', localPlayer.id);
+                
                 if (currentPlayer && currentPlayer.id === localPlayer.id && currentPlayer.isBot) {
+                    console.log('🤖 Bot deciding on partnership...');
                     // Bot automatically decides on partnership
                     botDecidePartnership(latestRequest);
                 } else {
+                    console.log('👨 Human player, showing modal...');
                     // Show modal for human players
                     showPartnershipRequestModal(latestRequest);
                 }
@@ -4782,6 +4797,10 @@ padding-bottom: 20;
         
         // 🤖 Bot Partnership Decision
         async function botDecidePartnership(request) {
+            console.log('🤖 Bot deciding on partnership request:', request);
+            // Bot thinks for 2 seconds before deciding
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
             const requester = gameData.players.find(p => p.id === request.requesterId);
             const partner = gameData.players.find(p => p.id === request.partnerId);
             const space = gameData.settings.board[request.propertyPosition];
@@ -4860,39 +4879,39 @@ padding-bottom: 20;
                 
                 // Accept partnership - implement bot logic inline
                 const requests = [...(gameData.partnershipRequests || [])];
-                const request = requests.find(r => r.id === requestId);
+                const partnershipRequest = requests.find(r => r.id === request.id);
                 
-                if (request) {
+                if (partnershipRequest) {
                     const playersCopy = JSON.parse(JSON.stringify(gameData.players));
                     const propertiesCopy = JSON.parse(JSON.stringify(gameData.properties));
                     
-                    const requesterIndex = playersCopy.findIndex(p => p.id === request.requesterId);
-                    const partnerIndex = playersCopy.findIndex(p => p.id === request.partnerId);
+                    const requesterIndex = playersCopy.findIndex(p => p.id === partnershipRequest.requesterId);
+                    const partnerIndex = playersCopy.findIndex(p => p.id === partnershipRequest.partnerId);
                     
                     // Deduct money
-                    playersCopy[requesterIndex].money -= request.requesterCost;
-                    playersCopy[partnerIndex].money -= request.partnerCost;
+                    playersCopy[requesterIndex].money -= partnershipRequest.requesterCost;
+                    playersCopy[partnerIndex].money -= partnershipRequest.partnerCost;
                     
                     // Set up ownership
-                    if (!propertiesCopy[request.propertyPosition].owners) {
-                        propertiesCopy[request.propertyPosition].owners = {};
+                    if (!propertiesCopy[partnershipRequest.propertyPosition].owners) {
+                        propertiesCopy[partnershipRequest.propertyPosition].owners = {};
                     }
-                    propertiesCopy[request.propertyPosition].owners[request.requesterId] = request.requesterShare;
-                    propertiesCopy[request.propertyPosition].owners[request.partnerId] = request.partnerShare;
+                    propertiesCopy[partnershipRequest.propertyPosition].owners[partnershipRequest.requesterId] = partnershipRequest.requesterShare;
+                    propertiesCopy[partnershipRequest.propertyPosition].owners[partnershipRequest.partnerId] = partnershipRequest.partnerShare;
                     
                     // Determine main owner (highest share)
-                    const mainOwner = request.requesterShare > request.partnerShare ? request.requesterId : request.partnerId;
-                    propertiesCopy[request.propertyPosition].ownerId = mainOwner;
+                    const mainOwner = partnershipRequest.requesterShare > partnershipRequest.partnerShare ? partnershipRequest.requesterId : partnershipRequest.partnerId;
+                    propertiesCopy[partnershipRequest.propertyPosition].ownerId = mainOwner;
                     
                     // Remove request
-                    const updatedRequests = requests.filter(r => r.id !== requestId);
+                    const updatedRequests = requests.filter(r => r.id !== partnershipRequest.id);
                     
                     await updateGame({
                         players: playersCopy,
                         properties: propertiesCopy,
                         partnershipRequests: updatedRequests,
                         turnState: 'action_complete',
-                        gameLog: [...gameData.gameLog, `� ${request.requesterName} and ${request.partnerName} became partners on ${request.propertyName}!`]
+                        gameLog: [...gameData.gameLog, `🤝 ${partnershipRequest.requesterName} and ${partnershipRequest.partnerName} became partners on ${partnershipRequest.propertyName}!`]
                     });
                 }
             } else {
@@ -4901,25 +4920,103 @@ padding-bottom: 20;
                 
                 // Decline partnership - implement bot logic inline
                 const requests = [...(gameData.partnershipRequests || [])];
-                const request = requests.find(r => r.id === requestId);
+                const partnershipRequest = requests.find(r => r.id === request.id);
                 
-                if (request) {
+                if (partnershipRequest) {
                     // Remove request
-                    const updatedRequests = requests.filter(r => r.id !== requestId);
+                    const updatedRequests = requests.filter(r => r.id !== partnershipRequest.id);
                     
                     // Add to declined list so requester knows
                     const declinedRequests = gameData.declinedPartnershipRequests || [];
                     declinedRequests.push({
-                        ...request,
+                        ...partnershipRequest,
                         declinedAt: Date.now()
                     });
                     
                     await updateGame({
                         partnershipRequests: updatedRequests,
                         declinedPartnershipRequests: declinedRequests,
-                        gameLog: [...gameData.gameLog, `❌ ${request.partnerName} declined partnership with ${request.requesterName} for ${request.propertyName}`]
+                        gameLog: [...gameData.gameLog, `❌ ${partnershipRequest.partnerName} declined partnership with ${partnershipRequest.requesterName} for ${partnershipRequest.propertyName}`]
                     });
                 }
+            }
+        }
+        
+        // 🤖 Bot Trade Decision
+        async function botDecideTrade(trade) {
+            // Bot thinks for 2 seconds before deciding
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            const fromPlayer = gameData.players.find(p => p.id === trade.fromId);
+            const toPlayer = gameData.players.find(p => p.id === trade.toId);
+            
+            if (!fromPlayer || !toPlayer) {
+                declineTrade(trade.id);
+                return;
+            }
+            
+            // Calculate trade value
+            let offerValue = 0;
+            let requestValue = 0;
+            
+            // Calculate offered money
+            offerValue += trade.fromMoney || 0;
+            
+            // Calculate offered properties value
+            if (trade.fromProperties && trade.fromProperties.length > 0) {
+                trade.fromProperties.forEach(propIndex => {
+                    const space = gameData.settings.board[propIndex];
+                    if (space) offerValue += space.price;
+                });
+            }
+            
+            // Calculate requested money
+            requestValue += trade.toMoney || 0;
+            
+            // Calculate requested properties value
+            if (trade.toProperties && trade.toProperties.length > 0) {
+                trade.toProperties.forEach(propIndex => {
+                    const space = gameData.settings.board[propIndex];
+                    if (space) requestValue += space.price;
+                });
+            }
+            
+            // Bot's perspective: What bot is giving vs receiving
+            const botGivingValue = trade.toMoney + (trade.toProperties ? trade.toProperties.reduce((sum, propIndex) => {
+                const space = gameData.settings.board[propIndex];
+                return sum + (space ? space.price : 0);
+            }, 0) : 0);
+            
+            const botReceivingValue = trade.fromMoney + (trade.fromProperties ? trade.fromProperties.reduce((sum, propIndex) => {
+                const space = gameData.settings.board[propIndex];
+                return sum + (space ? space.price : 0);
+            }, 0) : 0);
+            
+            // Bot's financial situation
+            const botMoneyRatio = toPlayer.money / (fromPlayer.money + toPlayer.money);
+            
+            // Calculate decision score
+            let score = 0;
+            
+            // Value difference (positive if bot gains value)
+            const valueDiff = botReceivingValue - botGivingValue;
+            score += valueDiff * 0.5;
+            
+            // Financial advantage (prefer if bot is wealthier)
+            if (botMoneyRatio > 0.6) score += 20; // Bot is rich, can be generous
+            else if (botMoneyRatio < 0.4) score -= 20; // Bot is poor, be conservative
+            
+            // Random factor for unpredictability
+            score += (Math.random() - 0.5) * 40;
+            
+            if (score >= 30) {
+                // Accept trade
+                addLog(`🤖 ${toPlayer.name} accepted trade with ${fromPlayer.name}.`);
+                acceptTrade(trade.id);
+            } else {
+                // Decline trade
+                addLog(`🤖 ${toPlayer.name} declined trade with ${fromPlayer.name}.`);
+                declineTrade(trade.id);
             }
         }
         
@@ -6313,6 +6410,12 @@ padding-bottom: 20;
             const me = gameData.players.find(p => p.id === localPlayer.id);
             
             if (!fromPlayer || !me) {
+                return;
+            }
+            
+            // If recipient is a bot, auto-decide on trade
+            if (me.isBot) {
+                botDecideTrade(trade);
                 return;
             }
             
