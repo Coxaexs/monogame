@@ -4661,7 +4661,16 @@ padding-bottom: 20;
             
             if (myRequests.length > 0) {
                 const latestRequest = myRequests[myRequests.length - 1];
-                showPartnershipRequestModal(latestRequest);
+                
+                // Check if the current player (who might be receiving this request) is a bot
+                const currentPlayer = gameData.players[gameData.currentPlayerIndex];
+                if (currentPlayer && currentPlayer.id === localPlayer.id && currentPlayer.isBot) {
+                    // Bot automatically decides on partnership
+                    botDecidePartnership(latestRequest);
+                } else {
+                    // Show modal for human players
+                    showPartnershipRequestModal(latestRequest);
+                }
             }
         }
         
