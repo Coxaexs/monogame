@@ -68,11 +68,58 @@
 - Automatically ends turn after 1 second with log message
 
 ## Current Status:
-- ✅ = Fixed (13/14 = 93% complete)
-- ❓ = Needs investigation (1/14)
+- ✅ = Fixed (18/20 = 90% complete)
+- ❓ = Needs investigation (1/20)
+- ❌ = Not fixed yet (1/20)
 
 ## Remaining Issues:
 3. Bot zar atmıyo (bazen)
 5. Zar attım ileri yerine geri gitti
 8. Kicklenince oyun donuyor (2 kişi kalınca)
+20. Kendi yerine gelince kira ödüyor (race condition)
+
+## NEW BUGS TO FIX (User Reported):
+15. ✅ **Trade reddetme çalışmıyor** - Added 500ms delay to prevent race condition, added trade ID logging
+16. ✅ **Trade sonrası turn end olmuyor** - acceptTrade() now sets turnState='action_complete' if current player involved
+17. ✅ **Bazen roll dice/end turn yapamıyor** - Fixed all game flows to properly set turnState='action_complete' instead of calling endTurn() directly. Added 5-second safety check to force action_complete if stuck in 'rolled' state.
+18. ✅ **Bot oyuncu yerine zar atıyor** - Added triple bot validation: validates isBot before turn, sets isBotTurnInProgress lock, double-checks after delay
+19. ✅ **İflas etmiş oyuncuya pop-up geliyor** - checkPendingTrades() now filters out bankrupt players (myPlayer.isBankrupt check)
+20. ❌ **Kendi yerine gelince kira ödüyor (race condition)** - Log'da hem "no rent" hem "paid rent" görünüyor
+
+### Button Blocking Fix (Bug #17) (✅ FIXED)
+**Problem**: Roll Dice and End Turn buttons sometimes became unresponsive because various game actions weren't properly setting `turnState` to `'action_complete'`.
+
+**Root Cause**: Multiple game flows (rent payment, tax payment, card drawing, jail, auctions, etc.) were calling the `endTurn()` async function instead of directly setting `turnState='action_complete'`. The `endTurn()` function had early returns that didn't set turnState, and it would sometimes set it to 'start' instead of 'action_complete' (for doubles).
+
+**Fixes Applied**:
+1. **Own Property Landing** (line ~4704): Changed from auto-calling `endTurn()` to just setting `turnState='action_complete'`
+2. **Free Parking** (line ~4716): Changed from `setTimeout(() => endTurn(), 1000)` to `await updateGame({ turnState: 'action_complete' })`
+3. **Rent Payment** (lines ~5722, ~5754, ~5781):
+   - Bot rent: Sets `turnState='action_complete'` after payment
+   - Human rent: Sets `turnState='action_complete'` after modal closes
+   - Zero rent: Sets `turnState='action_complete'` immediately
+4. **Tax Payment** (lines ~5929, ~5950):
+   - Bot tax: Sets `turnState='action_complete'` after payment
+   - Human tax: Sets `turnState='action_complete'` after modal closes
+5. **Card Drawing** (lines ~5811, ~5902, ~5909):
+   - No cards: Sets `turnState='action_complete'`
+   - Bot cards: Sets `turnState='action_complete'` for auto-close cards
+   - Human cards: Sets `turnState='action_complete'` when modal closes
+6. **Go To Jail** (line ~5803): Sets `turnState='action_complete'` when sent to jail
+7. **Jail Actions** (lines ~6014, ~6017, ~6029):
+   - Roll for jail (success/fail): Both set `turnState='action_complete'`
+   - Pay jail fine: Sets `turnState='action_complete'`
+8. **Auction End** (line ~5694): Sets `turnState='action_complete'` after auction completes
+9. **Safety Mechanism** in `updateControls()` (line ~4196): Added 5-second timeout detection - if turnState is stuck in 'rolled' for >5s, automatically forces it to 'action_complete'
+
+**Result**: All game actions now properly enable the End Turn button by setting turnState to 'action_complete'. The safety mechanism prevents permanent button blocking if any edge case is missed.
+
+## FEATURE REQUESTS:
+- Bot mülk satma limiti (min tur sayısı)
+- Mülk satma fiyatı (min 1.5x property value)
+- Otel yapma ihtimali kontrolü
+- Chat ayrı kutucuk
+- Zar animasyonu
+- Bot ev/otel inşaa stratejisi
+- Bot ev satın alma/satma stratejisi
 

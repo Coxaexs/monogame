@@ -4187,6 +4187,21 @@ padding-bottom: 20;
             dice2El.textContent = gameData.lastDiceRoll[1] || '🎲';
 
             const canAct = isMyTurn && !currentPlayer.isBankrupt;
+            
+            // 🛡️ Safety check: If it's my turn and turnState is 'rolled' for more than 5 seconds, force action_complete
+            if (isMyTurn && gameData.turnState === 'rolled') {
+                const now = Date.now();
+                if (!window.lastRolledStateTime) {
+                    window.lastRolledStateTime = now;
+                } else if (now - window.lastRolledStateTime > 5000) {
+                    console.warn('⚠️ Turn state stuck in "rolled" for >5s, forcing action_complete');
+                    updateGame({ turnState: 'action_complete' });
+                    window.lastRolledStateTime = null;
+                }
+            } else {
+                window.lastRolledStateTime = null;
+            }
+            
             rollDiceBtn.disabled = !canAct || gameData.turnState !== 'start';
             
             // End turn butonu her zaman görünür ama sadece kendi turunda ve action_complete'de aktif
@@ -4697,13 +4712,10 @@ padding-bottom: 20;
                         // Kart başka birine ait ve bende hissem yok
                         payRent(position);
                     } else {
-                        // Kartın sahibiyim veya hissem var - otomatik turn end
+                        // Kartın sahibiyim veya hissem var - turn state'i action_complete yap
                         addLog('You own a share of this property. No rent to pay.');
-                        // Kendi yerine gelince turn otomatik end olsun
-                        setTimeout(() => {
-                            updateGame({ turnState: 'action_complete' });
-                            endTurn();
-                        }, 1000);
+                        // Turn state'i action_complete yap ki End Turn butonu aktif olsun
+                        await updateGame({ turnState: 'action_complete' });
                     }
                     break;
                 case 'go_to_jail':
@@ -4718,8 +4730,8 @@ padding-bottom: 20;
                     break;
                 case 'free_parking':
                     addLog('🅿️ Resting at Free Parking - nothing happens!');
-                    // Free parking does nothing, so automatically end turn
-                    setTimeout(() => endTurn(), 1000);
+                    // Free parking does nothing, so set action_complete for End Turn button
+                    await updateGame({ turnState: 'action_complete' });
                     break;
                 default:
                     handleAfterLanding();
@@ -4734,8 +4746,30 @@ padding-bottom: 20;
         async function botTurn() {
             const currentPlayer = gameData.players[gameData.currentPlayerIndex];
             
+            // CRITICAL: Only execute if current player is actually a bot
+            if (!currentPlayer || !currentPlayer.isBot) {
+                console.log('⚠️ botTurn called but current player is not a bot, aborting');
+                return;
+            }
+            
+            // Prevent multiple bot turns running at once
+            if (window.isBotTurnInProgress) {
+                console.log('⚠️ Bot turn already in progress, skipping');
+                return;
+            }
+            
+            window.isBotTurnInProgress = true;
+            
             // Wait a bit for realism
             await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Double-check still bot's turn (race condition protection)
+            const currentPlayerNow = gameData.players[gameData.currentPlayerIndex];
+            if (!currentPlayerNow || !currentPlayerNow.isBot || currentPlayerNow.id !== currentPlayer.id) {
+                console.log('⚠️ Turn changed while bot was waiting, aborting');
+                window.isBotTurnInProgress = false;
+                return;
+            }
             
             // Roll dice
             const die1 = Math.floor(Math.random() * 6) + 1;
@@ -5670,7 +5704,8 @@ padding-bottom: 20;
                 hideModal();
             }
             
-            endTurn();
+            // Set turn state to action_complete so End Turn button becomes enabled
+            await updateGame({ turnState: 'action_complete' });
         }
 
         
@@ -5700,7 +5735,7 @@ padding-bottom: 20;
             
             if (rentToPay === 0) {
                 addLog(`${currentPlayer.name} landed on their own property and pays no rent.`);
-                endTurn();
+                await updateGame({ turnState: 'action_complete' });
                 return;
             }
             
@@ -5729,7 +5764,8 @@ padding-bottom: 20;
                 // Check for bankruptcy after rent payment
                 const isBankrupt = await checkBankruptcy(currentPlayerIndex);
                 if (!isBankrupt) {
-                    endTurn();
+                    // Set turnState to action_complete so End Turn button becomes enabled
+                    await updateGame({ turnState: 'action_complete' });
                 }
                 return;
             }
@@ -5764,7 +5800,8 @@ padding-bottom: 20;
                     // Check for bankruptcy after rent payment
                     const isBankrupt = await checkBankruptcy(currentPlayerIndex);
                     if (!isBankrupt) {
-                        endTurn();
+                        // Set turnState to action_complete so End Turn button becomes enabled
+                        await updateGame({ turnState: 'action_complete' });
                     }
                 }}]
             );
@@ -5780,8 +5817,7 @@ padding-bottom: 20;
             playersCopy[currentPlayerIndex].jailTurns = 0;
             
             addLog(`${playersCopy[currentPlayerIndex].name} was sent to jail!`);
-            await updateGame({ players: playersCopy });
-            endTurn();
+            await updateGame({ players: playersCopy, turnState: 'action_complete' });
         }
 
         async function drawCard(type) {
@@ -5789,7 +5825,7 @@ padding-bottom: 20;
             
             if (!cards || cards.length === 0) {
                 addLog('No cards available in this game mode.');
-                endTurn();
+                await updateGame({ turnState: 'action_complete' });
                 return;
             }
             
@@ -5881,7 +5917,7 @@ padding-bottom: 20;
             // Bot ise modal gösterme, direkt işlemi yap
             if (currentPlayer.isBot) {
                 if (autoClose) {
-                    endTurn();
+                    await updateGame({ turnState: 'action_complete' });
                 }
                 return;
             }
@@ -5890,7 +5926,7 @@ padding-bottom: 20;
             showModal(
                 type === 'chance' ? '❓ Chance Card' : '🎁 Community Chest', 
                 `<p class="text-lg">${actionText}</p>`, 
-                [{ text: 'OK', class: 'bg-blue-500', action: () => { hideModal(); if (autoClose) endTurn(); }}]
+                [{ text: 'OK', class: 'bg-blue-500', action: async () => { hideModal(); if (autoClose) await updateGame({ turnState: 'action_complete' }); }}]
             );
         }
         
@@ -5908,7 +5944,7 @@ padding-bottom: 20;
                 // Check bankruptcy after tax payment
                 const isBankrupt = await checkBankruptcy(currentPlayerIndex);
                 if (!isBankrupt) {
-                    endTurn();
+                    await updateGame({ turnState: 'action_complete' });
                 }
                 return;
             }
@@ -5927,7 +5963,7 @@ padding-bottom: 20;
                     // Check for bankruptcy after tax payment
                     const isBankrupt = await checkBankruptcy(currentPlayerIndex);
                     if (!isBankrupt) {
-                        endTurn();
+                        await updateGame({ turnState: 'action_complete' });
                     }
                 }}]
             );
@@ -5990,12 +6026,11 @@ padding-bottom: 20;
                 addLog(`${gameData.players[gameData.currentPlayerIndex].name} rolled doubles and got out of jail!`);
                 const playersCopy = JSON.parse(JSON.stringify(gameData.players));
                 playersCopy[gameData.currentPlayerIndex].inJail = false;
-                await updateGame({ players: playersCopy });
-                endTurn(); // Allows normal turn to proceed
+                await updateGame({ players: playersCopy, turnState: 'action_complete' });
             } else {
                 addLog(`${gameData.players[gameData.currentPlayerIndex].name} failed to roll doubles.`);
                 // In a full game, track jail turns and force payment after 3 turns.
-                endTurn(); // Forfeit rest of turn
+                await updateGame({ turnState: 'action_complete' });
             }
         }
         
@@ -6005,8 +6040,7 @@ padding-bottom: 20;
             playersCopy[gameData.currentPlayerIndex].money -= 50;
             playersCopy[gameData.currentPlayerIndex].inJail = false;
             addLog(`${playersCopy[gameData.currentPlayerIndex].name} paid $50 to get out of jail.`);
-            await updateGame({ players: playersCopy });
-            endTurn();
+            await updateGame({ players: playersCopy, turnState: 'action_complete' });
         }
 
         managePropertiesBtn.addEventListener('click', () => {
@@ -6770,11 +6804,15 @@ padding-bottom: 20;
         function checkPendingTrades() {
             if (!gameData || !gameData.trades) return;
             
+            // Skip if local player is bankrupt
+            const myPlayer = gameData.players.find(p => p.id === localPlayer.id);
+            if (!myPlayer || myPlayer.isBankrupt) return;
+            
             // First, handle bot trades automatically
             const botTrades = gameData.trades.filter(t => {
                 if (!t || !t.id || t.status !== 'pending') return false;
                 const toPlayer = gameData.players.find(p => p.id === t.toId);
-                return toPlayer && toPlayer.isBot;
+                return toPlayer && toPlayer.isBot && !toPlayer.isBankrupt;
             });
             
             // Process bot trades automatically
@@ -6782,8 +6820,9 @@ padding-bottom: 20;
                 const toPlayer = gameData.players.find(p => p.id === trade.toId);
                 if (toPlayer && toPlayer.isBot && !shownTradeIds.has(trade.id)) {
                     shownTradeIds.add(trade.id);
-                    console.log(`🤖 Bot ${toPlayer.name} received trade offer, processing...`);
-                    botDecideTrade(trade);
+                    console.log(`🤖 Bot ${toPlayer.name} received trade offer ${trade.id}, processing...`);
+                    // Delay to prevent race conditions
+                    setTimeout(() => botDecideTrade(trade), 500);
                 }
             });
             
@@ -6937,10 +6976,15 @@ padding-bottom: 20;
             const fromPlayer = gameData.players.find(p => p && p.id === trade.fromId);
             const toPlayer = gameData.players.find(p => p && p.id === trade.toId);
             
+            // Check if current player is involved in trade
+            const currentPlayer = gameData.players[gameData.currentPlayerIndex];
+            const isCurrentPlayerInvolved = currentPlayer && (currentPlayer.id === trade.fromId || currentPlayer.id === trade.toId);
+            
             await updateGame({
                 players: playersCopy,
                 properties: propertiesCopy,
                 trades: updatedTrades,
+                turnState: isCurrentPlayerInvolved ? 'action_complete' : gameData.turnState,
                 gameLog: [...gameData.gameLog, `🤝 ${toPlayer.name} accepted a trade from ${fromPlayer.name}!`]
             });
             
