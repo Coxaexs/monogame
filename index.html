@@ -2287,7 +2287,7 @@ padding-bottom: 20;
                 { name: "Ventnor Ave", type: "property", price: 260, rent: [22, 110, 330, 800, 975, 1150], color: "#ffeb3b", houseCost: 150 },
                 { name: "Water Works", type: "utility", price: 150 },
                 { name: "Marvin Gardens", type: "property", price: 280, rent: [24, 120, 360, 850, 1025, 1200], color: "#ffeb3b", houseCost: 150 },
-                { name: "Go to Jail", type: "go_to_jail" },
+                { name: "Secim kazandin, hapse gir.", type: "go_to_jail" },
                 { name: "Pacific Ave", type: "property", price: 300, rent: [26, 130, 390, 900, 1100, 1275], color: "#4caf50", houseCost: 200 },
                 { name: "North Carolina Ave", type: "property", price: 300, rent: [26, 130, 390, 900, 1100, 1275], color: "#4caf50", houseCost: 200 },
                 { name: "Community Chest", type: "community_chest" },
@@ -2308,7 +2308,7 @@ padding-bottom: 20;
                 { text: "Bank pays you dividend of $50.", action: "add_money", amount: 50 },
                 { text: "Get Out of Jail Free.", action: "get_out_of_jail" },
                 { text: "Go Back 3 Spaces.", action: "move_back", amount: 3 },
-                { text: "Go to Jail. Go directly to Jail.", action: "go_to_jail" },
+                { text: "Diktatore karsi secim kazandin, hapse gir.", action: "go_to_jail" },
                 { text: "Pay poor tax of $15.", action: "remove_money", amount: 15 },
                 { text: "Your building loan matures. Collect $150.", action: "add_money", amount: 150 },
                 { text: "Speeding fine $50.", action: "remove_money", amount: 50 },
@@ -2323,7 +2323,7 @@ padding-bottom: 20;
                 { text: "Doctor's fees. Pay $50.", action: "remove_money", amount: 50 },
                 { text: "From sale of stock you get $50.", action: "add_money", amount: 50 },
                 { text: "Get Out of Jail Free.", action: "get_out_of_jail" },
-                { text: "Go to Jail. Go directly to Jail.", action: "go_to_jail" },
+                { text: "Diktatore karsi secim kazandin, hapse gir.", action: "go_to_jail" },
                 { text: "Holiday fund matures. Receive $100.", action: "add_money", amount: 100 },
                 { text: "Income tax refund. Collect $20.", action: "add_money", amount: 20 },
                 { text: "Life insurance matures. Collect $100.", action: "add_money", amount: 100 },
@@ -2567,7 +2567,7 @@ padding-bottom: 20;
             { name: "Shanghai - Bund", type: "property", price: 270, rent: [25,125,375,950,1200,1600], color: "#ffeb3b", houseCost: 150 },
             { name: "Water Works", type: "utility", price: 150 },
             { name: "Mumbai - Gateway of India", type: "property", price: 290, rent: [27,135,405,1000,1250,1700], color: "#ffeb3b", houseCost: 150 },
-            { name: "Go to Jail", type: "go_to_jail" },
+            { name: "Secim kazandin, hapse gir.", type: "go_to_jail" },
             { name: "New York - Manhattan", type: "property", price: 310, rent: [29,145,435,1050,1300,1800], color: "#4caf50", houseCost: 200 },
             { name: "London - Mayfair", type: "property", price: 310, rent: [29,145,435,1050,1300,1800], color: "#4caf50", houseCost: 200 },
             { name: "Community Chest", type: "community_chest" },
@@ -2645,7 +2645,7 @@ padding-bottom: 20;
             { name: "Expensive Plaza", type: "property", price: 1500, rent: [300,1500,4500,10500,14700,18900], color: "#ed1c24", houseCost: 150 },
             { name: "Luxury Lane", type: "property", price: 1800, rent: [360,1800,5400,12600,17600,22600], color: "#ed1c24", houseCost: 150 },
             { name: "Elite Street", type: "property", price: 2100, rent: [420,2100,6300,14700,20600,26500], color: "#ffeb3b", houseCost: 200 },
-            { name: "Go to Jail", type: "go_to_jail" },
+            { name: "Secim kazandin, hapse gir.", type: "go_to_jail" },
             { name: "Exclusive Avenue", type: "property", price: 2500, rent: [500,2500,7500,17500,24500,31500], color: "#ffeb3b", houseCost: 200 },
             { name: "Prestige Plaza", type: "property", price: 2900, rent: [580,2900,8700,20300,28400,36500], color: "#ffeb3b", houseCost: 200 },
             { name: "VIP Quarter", type: "property", price: 3300, rent: [660,3300,9900,23100,32300,41500], color: "#4caf50", houseCost: 250 },
@@ -3324,7 +3324,7 @@ padding-bottom: 20;
             lobbyPlayersList.innerHTML = gameData.players.map(p => `
                 <div class="flex items-center gap-2 p-2 bg-gray-100 rounded-md">
                     <div class="w-4 h-4 rounded-full" style="background-color: ${p.color};"></div>
-                    <span class="font-medium">${p.name} ${characterIcons[p.character] || ''}</span>
+                    <span class="font-medium">${p.name} ${p.isBot ? '🤖' : (characterIcons[p.character] || '')}</span>
                 </div>
             `).join('');
             startGameBtn.disabled = gameData.players.length < 2;
@@ -3830,7 +3830,7 @@ padding-bottom: 20;
             });
             
             const totalWealth = player.money + totalPropertyValue;
-            const emoji = characterIcons[player.character] || '❓';
+            const emoji = player.isBot ? '🤖' : (characterIcons[player.character] || '❓');
             
             // Stats tracking (you can extend this by adding these to player object)
             const jailTimes = player.jailCount || 0;
@@ -4051,8 +4051,8 @@ padding-bottom: 20;
                 pieceEl.className = 'player-piece';
                 pieceEl.id = `piece-${p.id}`;
                 
-                // Get emoji from characterIcons
-                const emoji = characterIcons[p.character] || '❓';
+                // Get emoji from characterIcons (🤖 for bots)
+                const emoji = p.isBot ? '🤖' : (characterIcons[p.character] || '❓');
                 
                 // Debug log
                 console.log(`🎮 Player ${p.name}: character='${p.character}', emoji='${emoji}'`);
@@ -4129,7 +4129,7 @@ padding-bottom: 20;
                     card.classList.add('active');
                 }
                 
-                const emoji = characterIcons[player.character] || '❓';
+                const emoji = player.isBot ? '🤖' : (characterIcons[player.character] || '❓');
                 const name = player.name.length > 8 ? player.name.substring(0, 8) + '...' : player.name;
                 const money = `$${player.money}`;
                 
@@ -4188,7 +4188,21 @@ padding-bottom: 20;
 
             const canAct = isMyTurn && !currentPlayer.isBankrupt;
             rollDiceBtn.disabled = !canAct || gameData.turnState !== 'start';
-            endTurnBtn.classList.toggle('hidden', !canAct || gameData.turnState !== 'action_complete');
+            
+            // End turn butonu her zaman görünür ama sadece kendi turunda ve action_complete'de aktif
+            endTurnBtn.classList.remove('hidden'); // Her zaman göster
+            endTurnBtn.disabled = !canAct || gameData.turnState !== 'action_complete';
+            if (!canAct) {
+                endTurnBtn.style.opacity = '0.5';
+                endTurnBtn.style.cursor = 'not-allowed';
+            } else if (gameData.turnState !== 'action_complete') {
+                endTurnBtn.style.opacity = '0.6';
+                endTurnBtn.style.cursor = 'not-allowed';
+            } else {
+                endTurnBtn.style.opacity = '1';
+                endTurnBtn.style.cursor = 'pointer';
+            }
+            
             managePropertiesBtn.classList.toggle('hidden', !canAct || (gameData.turnState !== 'start' && gameData.turnState !== 'action_complete'));
             
             // Mobil butonları da güncelle
@@ -4201,7 +4215,17 @@ padding-bottom: 20;
             if (mobileRollBtn) mobileRollBtn.disabled = !canAct || gameData.turnState !== 'start';
             if (mobileEndTurnBtn) {
                 mobileEndTurnBtn.disabled = !canAct || gameData.turnState !== 'action_complete';
-                mobileEndTurnBtn.style.display = (!canAct || gameData.turnState !== 'action_complete') ? 'none' : 'inline-flex';
+                mobileEndTurnBtn.style.display = 'inline-flex'; // Her zaman göster
+                if (!canAct) {
+                    mobileEndTurnBtn.style.opacity = '0.5';
+                    mobileEndTurnBtn.style.cursor = 'not-allowed';
+                } else if (gameData.turnState !== 'action_complete') {
+                    mobileEndTurnBtn.style.opacity = '0.6';
+                    mobileEndTurnBtn.style.cursor = 'not-allowed';
+                } else {
+                    mobileEndTurnBtn.style.opacity = '1';
+                    mobileEndTurnBtn.style.cursor = 'pointer';
+                }
             }
             if (mobilePropertiesBtn) {
                 mobilePropertiesBtn.disabled = !canAct || (gameData.turnState !== 'start' && gameData.turnState !== 'action_complete');
@@ -4256,14 +4280,28 @@ padding-bottom: 20;
             const die1 = Math.floor(Math.random() * 6) + 1;
             const die2 = Math.floor(Math.random() * 6) + 1;
             const total = die1 + die2;
+            const oldPosition = currentPlayer.position;
             const newPosition = (currentPlayer.position + total) % 40;
-            const newMoney = currentPlayer.money;
             
             // 🎲 Check for doubles
             const isDouble = (die1 === die2);
             const playersCopy = JSON.parse(JSON.stringify(gameData.players));
+            
+            // ⭐ Check if passed GO (position wrapped around)
+            let passGoBonus = 0;
+            if (newPosition < oldPosition) {
+                // Passed GO
+                passGoBonus = gameData.settings.passGoBonus || 200;
+                playersCopy[gameData.currentPlayerIndex].money += passGoBonus;
+                logMessages.push(`💰 ${currentPlayer.name} passed GO! +$${passGoBonus}`);
+            } else if (newPosition === 0) {
+                // Landed exactly on GO
+                passGoBonus = (gameData.settings.passGoBonus || 200) + 100;
+                playersCopy[gameData.currentPlayerIndex].money += passGoBonus;
+                logMessages.push(`🎯 ${currentPlayer.name} landed on GO! +$${passGoBonus}`);
+            }
+            
             playersCopy[gameData.currentPlayerIndex].position = newPosition;
-            playersCopy[gameData.currentPlayerIndex].money = newMoney;
             
             // Update lucky turns and track doubles
             if (currentPlayer.isLucky && currentPlayer.luckyTurnsLeft > 0) {
@@ -4574,6 +4612,15 @@ padding-bottom: 20;
         };
         
         endTurnBtn.addEventListener('click', async () => {
+            // Sadece kendi turunsa ve action_complete durumundaysa çalışsın
+            const currentPlayer = gameData.players[gameData.currentPlayerIndex];
+            const isMyTurn = currentPlayer && currentPlayer.id === localPlayer.id;
+            
+            if (!isMyTurn || gameData.turnState !== 'action_complete') {
+                console.log('Not your turn or turn not complete yet!');
+                return;
+            }
+            
             let nextPlayerIndex = (gameData.currentPlayerIndex + 1) % gameData.players.length;
             
             const playersCopy = JSON.parse(JSON.stringify(gameData.players));
@@ -4650,9 +4697,13 @@ padding-bottom: 20;
                         // Kart başka birine ait ve bende hissem yok
                         payRent(position);
                     } else {
-                        // Kartın sahibiyim veya hissem var
-                        addLog('You own a share of this property.');
-                        handleAfterLanding();
+                        // Kartın sahibiyim veya hissem var - otomatik turn end
+                        addLog('You own a share of this property. No rent to pay.');
+                        // Kendi yerine gelince turn otomatik end olsun
+                        setTimeout(() => {
+                            updateGame({ turnState: 'action_complete' });
+                            endTurn();
+                        }, 1000);
                     }
                     break;
                 case 'go_to_jail':
@@ -4664,6 +4715,11 @@ padding-bottom: 20;
                     break;
                 case 'tax':
                     payTax(space.amount);
+                    break;
+                case 'free_parking':
+                    addLog('🅿️ Resting at Free Parking - nothing happens!');
+                    // Free parking does nothing, so automatically end turn
+                    setTimeout(() => endTurn(), 1000);
                     break;
                 default:
                     handleAfterLanding();
@@ -5624,43 +5680,92 @@ padding-bottom: 20;
             const currentPlayerIndex = gameData.currentPlayerIndex;
             const currentPlayer = gameData.players[currentPlayerIndex];
 
-            let rentAmount = 0;
+            let baseRent = 0;
             if (space.type === 'property') {
-                rentAmount = space.rent[propertyState.houses];
+                baseRent = space.rent[propertyState.houses];
             } else if (space.type === 'railroad') {
                 const owner = gameData.players.find(p => p.id === propertyState.ownerId);
                 const railCount = gameData.properties.filter(p => p.ownerId === owner.id && gameData.settings.board[p.spaceIndex].type === 'railroad').length;
-                rentAmount = 25 * Math.pow(2, railCount - 1);
+                baseRent = 25 * Math.pow(2, railCount - 1);
             }
             
             // Hisse sahiplerine göre kira dağıtımı
             const owners = propertyState.owners || { [propertyState.ownerId]: 100 };
-            let rentDistribution = '';
             
+            // Check if current player owns shares
+            const playerShare = owners[currentPlayer.id] || 0;
+            
+            // Player pays only the portion they don't own
+            const rentToPay = Math.floor(baseRent * ((100 - playerShare) / 100));
+            
+            if (rentToPay === 0) {
+                addLog(`${currentPlayer.name} landed on their own property and pays no rent.`);
+                endTurn();
+                return;
+            }
+            
+            // Bot ise direkt öde, modal gösterme
+            if (currentPlayer.isBot) {
+                const playersCopy = JSON.parse(JSON.stringify(gameData.players));
+                
+                // Kiradan payını çıkar
+                playersCopy[currentPlayerIndex].money -= rentToPay;
+                
+                // Kira hisse sahiplerine dağıtılır (kendisi hariç)
+                for (const [ownerId, sharePercentage] of Object.entries(owners)) {
+                    if (ownerId === currentPlayer.id) continue; // Skip self
+                    
+                    const ownerShare = Math.floor(baseRent * (sharePercentage / 100));
+                    const ownerIndex = playersCopy.findIndex(p => p.id === ownerId);
+                    if (ownerIndex !== -1) {
+                        playersCopy[ownerIndex].money += ownerShare;
+                        const ownerName = playersCopy[ownerIndex].name;
+                        addLog(`🤖 ${currentPlayer.name} paid $${ownerShare} (${sharePercentage}% of $${baseRent}) to ${ownerName}.`);
+                    }
+                }
+                
+                await updateGame({ players: playersCopy });
+                
+                // Check for bankruptcy after rent payment
+                const isBankrupt = await checkBankruptcy(currentPlayerIndex);
+                if (!isBankrupt) {
+                    endTurn();
+                }
+                return;
+            }
+            
+            // Human player için modal göster
             showModal(
                 'Pay Rent',
-                `<p>You landed on ${space.name}. You must pay $${rentAmount} in rent.</p>
-                 <p class="text-xs text-gray-600 mt-2">Rent will be distributed among share holders.</p>`,
+                `<p>You landed on ${space.name}. You must pay $${rentToPay} in rent.</p>
+                 <p class="text-xs text-gray-600 mt-2">You own ${playerShare}% of this property.</p>`,
                 [{ text: 'Pay Rent', class: 'bg-red-500', action: async () => {
                     const playersCopy = JSON.parse(JSON.stringify(gameData.players));
                     
                     // Kiradan payını çıkar
-                    playersCopy[currentPlayerIndex].money -= rentAmount;
+                    playersCopy[currentPlayerIndex].money -= rentToPay;
                     
-                    // Kira hisse sahiplerine dağıtılır
+                    // Kira hisse sahiplerine dağıtılır (kendisi hariç)
                     for (const [ownerId, sharePercentage] of Object.entries(owners)) {
-                        const ownerShare = Math.floor(rentAmount * (sharePercentage / 100));
+                        if (ownerId === currentPlayer.id) continue; // Skip self
+                        
+                        const ownerShare = Math.floor(baseRent * (sharePercentage / 100));
                         const ownerIndex = playersCopy.findIndex(p => p.id === ownerId);
                         if (ownerIndex !== -1) {
                             playersCopy[ownerIndex].money += ownerShare;
                             const ownerName = playersCopy[ownerIndex].name;
-                            addLog(`${currentPlayer.name} paid $${ownerShare} (${sharePercentage}%) to ${ownerName}.`);
+                            addLog(`${currentPlayer.name} paid $${ownerShare} (${sharePercentage}% of $${baseRent}) to ${ownerName}.`);
                         }
                     }
                     
                     await updateGame({ players: playersCopy });
                     hideModal();
-                    endTurn();
+                    
+                    // Check for bankruptcy after rent payment
+                    const isBankrupt = await checkBankruptcy(currentPlayerIndex);
+                    if (!isBankrupt) {
+                        endTurn();
+                    }
                 }}]
             );
         }
@@ -5690,6 +5795,7 @@ padding-bottom: 20;
             
             const card = cards[Math.floor(Math.random() * cards.length)];
             const currentPlayerIndex = gameData.currentPlayerIndex;
+            const currentPlayer = gameData.players[currentPlayerIndex];
             const playersCopy = JSON.parse(JSON.stringify(gameData.players));
             
             addLog(`${playersCopy[currentPlayerIndex].name} drew: "${card.text}"`);
@@ -5706,6 +5812,9 @@ padding-bottom: 20;
                 case 'remove_money':
                     playersCopy[currentPlayerIndex].money -= card.amount;
                     await updateGame({ players: playersCopy });
+                    // Check bankruptcy after money removal
+                    const bankruptAfterCard = await checkBankruptcy(currentPlayerIndex);
+                    if (bankruptAfterCard) return; // Don't continue if bankrupt
                     autoClose = true;
                     break;
                 case 'move_to':
@@ -5762,10 +5871,22 @@ padding-bottom: 20;
                     playersCopy[currentPlayerIndex].money -= repairCost;
                     actionText += `\n\nTotal cost: $${repairCost}`;
                     await updateGame({ players: playersCopy });
+                    // Check bankruptcy after repair costs
+                    const bankruptAfterRepair = await checkBankruptcy(currentPlayerIndex);
+                    if (bankruptAfterRepair) return; // Don't continue if bankrupt
                     autoClose = true;
                     break;
             }
             
+            // Bot ise modal gösterme, direkt işlemi yap
+            if (currentPlayer.isBot) {
+                if (autoClose) {
+                    endTurn();
+                }
+                return;
+            }
+            
+            // Human player için modal göster
             showModal(
                 type === 'chance' ? '❓ Chance Card' : '🎁 Community Chest', 
                 `<p class="text-lg">${actionText}</p>`, 
@@ -5775,6 +5896,24 @@ padding-bottom: 20;
         
          async function payTax(amount) {
             const currentPlayerIndex = gameData.currentPlayerIndex;
+            const currentPlayer = gameData.players[currentPlayerIndex];
+            
+            // Bot ise direkt öde, modal gösterme
+            if (currentPlayer.isBot) {
+                const playersCopy = JSON.parse(JSON.stringify(gameData.players));
+                playersCopy[currentPlayerIndex].money -= amount;
+                addLog(`🤖 ${playersCopy[currentPlayerIndex].name} paid $${amount} in taxes.`);
+                await updateGame({ players: playersCopy });
+                
+                // Check bankruptcy after tax payment
+                const isBankrupt = await checkBankruptcy(currentPlayerIndex);
+                if (!isBankrupt) {
+                    endTurn();
+                }
+                return;
+            }
+            
+            // Human player için modal göster
             showModal(
                 'Income Tax',
                 `<p>You must pay $${amount} in taxes.</p>`,
@@ -5784,7 +5923,12 @@ padding-bottom: 20;
                     addLog(`${playersCopy[currentPlayerIndex].name} paid $${amount} in taxes.`);
                     await updateGame({ players: playersCopy });
                     hideModal();
-                    endTurn();
+                    
+                    // Check for bankruptcy after tax payment
+                    const isBankrupt = await checkBankruptcy(currentPlayerIndex);
+                    if (!isBankrupt) {
+                        endTurn();
+                    }
                 }}]
             );
         }
@@ -5797,7 +5941,7 @@ padding-bottom: 20;
             // 3 doubles in a row = go to jail
             if (isDouble && doublesCount >= 3) {
                 showModal('⚠️ Too Many Doubles!', 'You rolled doubles 3 times in a row! Go directly to jail!', [
-                    {text: 'Go to Jail', class: 'bg-red-600', action: () => {
+                    {text: 'Secimi kazandin, hapse gir', class: 'bg-red-600', action: () => {
                         hideModal();
                         goToJail();
                     }}
@@ -6187,8 +6331,16 @@ padding-bottom: 20;
             // Kart çalma joker'ini azalt
             playersCopy[myIndex].jokerCards.steal -= 1;
             
-            // Mülkiyet transferi
+            // Mülkiyet transferi - HEM ownerId HEM de owners'ı güncelle
             propertiesCopy[spaceIndex].ownerId = localPlayer.id;
+            
+            // Hisse sistemini güncelle - %100 yeni sahibin olsun
+            propertiesCopy[spaceIndex].owners = {
+                [localPlayer.id]: 100
+            };
+            
+            // Evleri sıfırla (çalınan mülkte ev kalmaz)
+            propertiesCopy[spaceIndex].houses = 0;
             
             await updateGame({ 
                 players: playersCopy, 
@@ -6512,7 +6664,92 @@ padding-bottom: 20;
              ]);
         }
 
-        // 💥 Declare Bankruptcy
+        // � Calculate Total Wealth (money + property value)
+        function calculateTotalWealth(player) {
+            const properties = gameData.properties
+                .map((prop, idx) => ({...prop, spaceIndex: idx}))
+                .filter(prop => prop.owners && prop.owners[player.id] > 0);
+            
+            let totalPropertyValue = 0;
+            properties.forEach(prop => {
+                const space = gameData.settings.board[prop.spaceIndex];
+                if (space.price) {
+                    const sharePercentage = prop.owners[player.id] || 0;
+                    totalPropertyValue += space.price * (sharePercentage / 100);
+                    if (prop.houses > 0 && prop.houses < 5) {
+                        totalPropertyValue += prop.houses * (space.houseCost || 50) * (sharePercentage / 100);
+                    } else if (prop.houses === 5) {
+                        totalPropertyValue += 5 * (space.houseCost || 50) * (sharePercentage / 100);
+                    }
+                }
+            });
+            
+            return player.money + totalPropertyValue;
+        }
+
+        // 🚨 Check for bankruptcy after money deduction
+        async function checkBankruptcy(playerIndex) {
+            const player = gameData.players[playerIndex];
+            
+            // If player has enough money, no bankruptcy check needed
+            if (player.money >= 0) return false;
+            
+            const totalWealth = calculateTotalWealth(player);
+            
+            // If total wealth is negative, force bankruptcy
+            if (totalWealth < 0) {
+                if (player.isBot) {
+                    // Bots automatically declare bankruptcy
+                    addLog(`💥 ${player.name} (BOT) went bankrupt! Total wealth: $${totalWealth.toFixed(0)}`);
+                    sendMessage({
+                        type: 'declare_bankruptcy',
+                        playerId: player.id
+                    });
+                    return true;
+                } else if (player.id === localPlayer.id) {
+                    // Human player forced to bankruptcy
+                    showModal(
+                        '💥 Bankruptcy!',
+                        `<p class="text-red-600 font-bold">Your total wealth is negative: $${totalWealth.toFixed(0)}</p>
+                         <p class="mt-2">You cannot continue playing. You must declare bankruptcy.</p>`,
+                        [{text: 'Declare Bankruptcy', class: 'bg-red-600', action: () => {
+                            sendMessage({
+                                type: 'declare_bankruptcy',
+                                playerId: localPlayer.id
+                            });
+                            localStorage.removeItem('monopolyCurrentGameId');
+                            localStorage.removeItem('monopolyPlayerId');
+                            hideModal();
+                        }}]
+                    );
+                    return true;
+                }
+            }
+            
+            // If money is negative but total wealth is positive, offer options
+            if (player.id === localPlayer.id && player.money < 0) {
+                showModal(
+                    '⚠️ Negative Cash!',
+                    `<p class="text-orange-600 font-bold">Your cash is negative: $${player.money}</p>
+                     <p>Total wealth: $${totalWealth.toFixed(0)}</p>
+                     <p class="mt-2">You can sell/mortgage properties or declare bankruptcy.</p>`,
+                    [
+                        {text: 'Manage Properties', class: 'bg-blue-500', action: () => {
+                            hideModal();
+                            // TODO: Open property management
+                        }},
+                        {text: 'Declare Bankruptcy', class: 'bg-red-600', action: () => {
+                            hideModal();
+                            window.declareBankruptcy();
+                        }}
+                    ]
+                );
+            }
+            
+            return false;
+        }
+
+        // �💥 Declare Bankruptcy
         window.declareBankruptcy = () => {
             showModal('💥 İflas Et', 'İflas etmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve oyun dışı kalacaksınız.', [
                 {text: 'İptal', class: 'bg-gray-500', action: hideModal},
@@ -6671,10 +6908,14 @@ padding-bottom: 20;
             playersCopy[toPlayerIndex].money -= trade.request.money;
             playersCopy[fromPlayerIndex].money += trade.request.money;
             
-            // Transfer properties
+            // Transfer properties - HEM ownerId HEM de owners'ı güncelle
             (trade.offer.properties || []).forEach(propIndex => {
                 if (propertiesCopy[propIndex]) {
                     propertiesCopy[propIndex].ownerId = trade.toId;
+                    // Hisse sistemini güncelle - %100 yeni sahibin
+                    propertiesCopy[propIndex].owners = {
+                        [trade.toId]: 100
+                    };
                     propertiesCopy[propIndex].houses = 0; // Reset houses
                 }
             });
@@ -6682,6 +6923,10 @@ padding-bottom: 20;
             (trade.request.properties || []).forEach(propIndex => {
                 if (propertiesCopy[propIndex]) {
                     propertiesCopy[propIndex].ownerId = trade.fromId;
+                    // Hisse sistemini güncelle - %100 yeni sahibin
+                    propertiesCopy[propIndex].owners = {
+                        [trade.fromId]: 100
+                    };
                     propertiesCopy[propIndex].houses = 0; // Reset houses
                 }
             });
