@@ -201,6 +201,56 @@ padding-bottom: 20;
             border: 2px solid white;
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
+        
+        /* 💬 Chat Panel Styling */
+        #chat-panel {
+            transition: all 0.3s ease;
+            min-height: 200px;
+        }
+        
+        #chat-messages {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e0 #f7fafc;
+        }
+        
+        #chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        #chat-messages::-webkit-scrollbar-track {
+            background: #f7fafc;
+            border-radius: 10px;
+        }
+        
+        #chat-messages::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 10px;
+        }
+        
+        #chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+        
+        .chat-message {
+            padding: 8px 12px;
+            background: white;
+            border-radius: 8px;
+            border-left: 3px solid #10b981;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        
+        .chat-message .sender {
+            font-weight: bold;
+            color: #059669;
+            font-size: 0.875rem;
+        }
+        
+        .chat-message .text {
+            color: #374151;
+            font-size: 0.875rem;
+            margin-top: 2px;
+        }
+        
         .modal {
             transition: opacity 0.25s ease;
             backdrop-filter: blur(8px);
@@ -695,6 +745,29 @@ padding-bottom: 20;
                 max-height: 100px;
             }
             
+            /* 💬 Chat Panel - Separate styling */
+            #chat-panel {
+                width: 100% !important;
+                max-height: 200px !important;
+                margin-top: 10px;
+                order: 10; /* Put it at the bottom */
+            }
+            
+            #chat-messages {
+                font-size: 12px;
+                min-height: 100px !important;
+                max-height: 120px !important;
+            }
+            
+            #chat-input {
+                font-size: 14px;
+            }
+            
+            #chat-send-btn {
+                font-size: 14px;
+                padding: 8px 12px;
+            }
+            
             /* Board container - center and resize */
             #board-container {
                 order: -1; /* Move board to top */
@@ -1078,6 +1151,7 @@ padding-bottom: 20;
             #rollDiceBtn,
             #endTurnBtn,
             #teamManagerBtn,
+            #takeCreditBtn,
             #managePropertiesBtn,
             #jokerCardsBtn,
             #left-panel,
@@ -1372,101 +1446,92 @@ padding-bottom: 20;
     </div>
 
     <!-- Game Screen -->
-    <div id="game-container" class="hidden w-full h-full p-2 flex flex-col lg:flex-row gap-2">
+    <div id="game-container" class="hidden w-full h-full p-2 flex flex-col gap-2">
         
-        <!-- Mobil Players Menüsü (Sadece mobilde en üstte) -->
-        <div id="mobile-players-bar" style="display: none;">
-            <div id="mobile-players-list" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 0.5rem; background: white; border-bottom: 2px solid #e0e0e0;"></div>
-        </div>
-        
-        <style>
-            @media (max-width: 768px) {
-                #mobile-players-bar {
-                    display: block !important;
-                    position: sticky;
-                    top: 0;
-                    z-index: 200;
-                }
-                #mobile-players-list {
-                    white-space: nowrap;
-                }
-                .mobile-player-card {
-                    display: inline-flex;
-                    flex-direction: column;
-                    align-items: center;
-                    min-width: 80px;
-                    padding: 0.5rem;
-                    background: #f9fafb;
-                    border-radius: 8px;
-                    border: 2px solid #e5e7eb;
-                    font-size: 0.75rem;
-                }
-                .mobile-player-card.active {
-                    border-color: #3b82f6;
-                    background: #eff6ff;
-                }
-            }
-            .game-link-display{
-                display: none !important;
-            }
-        </style>
-        
-        <!-- 🎨 Dark Mode Toggle (Top Right) -->
-        <button id="darkModeToggle" class="absolute top-4 right-4 bg-gradient-to-r from-gray-700 to-gray-900 text-white px-4 py-2 rounded-lg hover:from-gray-800 hover:to-black transition-all shadow-lg text-sm font-bold z-20">
-            🌙 Dark Mode
-        </button>
-        
-        <!-- 🔗 Game Link Display (Top Right, below dark mode) -->
-        <div id="game-link-display" class="absolute top-16 right-4 bg-white border border-gray-300 rounded-lg p-2 shadow-lg hidden z-20">
-            <div class="text-xs text-gray-600 mb-1">Game Link:</div>
-            <div class="flex gap-1">
-                <input id="game-link-input" type="text" readonly class="text-xs bg-gray-50 border border-gray-300 rounded px-2 py-1 flex-1 min-w-0" style="font-size: 10px;">
-                <button id="copy-game-link-btn" class="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600">
-                    📋
-                </button>
-            </div>
-        </div>
-
-
-        
-        <!-- Player Info and Controls -->
-        <div id="left-panel" class="w-full lg:w-1/4 bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-4 flex flex-col gap-3 overflow-y-auto border-2 border-gray-200">
-            <h2 class="text-2xl font-bold text-center">Players</h2>
-            <div id="players-info" class="flex-grow space-y-2">
-                <!-- Player cards will be here -->
+        <!-- Main Game Area (Players + Board + Right Panel) -->
+        <div class="flex-grow flex flex-col lg:flex-row gap-2">
+            
+            <!-- Mobil Players Menüsü (Sadece mobilde en üstte) -->
+            <div id="mobile-players-bar" style="display: none;">
+                <div id="mobile-players-list" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 0.5rem; background: white; border-bottom: 2px solid #e0e0e0;"></div>
             </div>
             
-            <!-- Game Link Display (moved from top-right) -->
-            <div id="game-link-display-mobile" class="hidden border-t-2 border-gray-200 pt-3">
+            <style>
+                @media (max-width: 768px) {
+                    #mobile-players-bar {
+                        display: block !important;
+                        position: sticky;
+                        top: 0;
+                        z-index: 200;
+                    }
+                    #mobile-players-list {
+                        white-space: nowrap;
+                    }
+                    .mobile-player-card {
+                        display: inline-flex;
+                        flex-direction: column;
+                        align-items: center;
+                        min-width: 80px;
+                        padding: 0.5rem;
+                        background: #f9fafb;
+                        border-radius: 8px;
+                        border: 2px solid #e5e7eb;
+                        font-size: 0.75rem;
+                    }
+                    .mobile-player-card.active {
+                        border-color: #3b82f6;
+                        background: #eff6ff;
+                    }
+                }
+                .game-link-display{
+                    display: none !important;
+                }
+            </style>
+            
+            <!-- 🎨 Dark Mode Toggle (Top Right) -->
+            <button id="darkModeToggle" class="absolute top-4 right-4 bg-gradient-to-r from-gray-700 to-gray-900 text-white px-4 py-2 rounded-lg hover:from-gray-800 hover:to-black transition-all shadow-lg text-sm font-bold z-20">
+                🌙 Dark Mode
+            </button>
+            
+            <!-- 🔗 Game Link Display (Top Right, below dark mode) -->
+            <div id="game-link-display" class="absolute top-16 right-4 bg-white border border-gray-300 rounded-lg p-2 shadow-lg hidden z-20">
                 <div class="text-xs text-gray-600 mb-1">Game Link:</div>
                 <div class="flex gap-1">
-                    <input id="game-link-input-mobile" type="text" readonly class="text-xs bg-gray-50 border border-gray-300 rounded px-2 py-1 flex-1 min-w-0" style="font-size: 10px;">
-                    <button id="copy-game-link-btn-mobile" class="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600">
+                    <input id="game-link-input" type="text" readonly class="text-xs bg-gray-50 border border-gray-300 rounded px-2 py-1 flex-1 min-w-0" style="font-size: 10px;">
+                    <button id="copy-game-link-btn" class="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600">
                         📋
                     </button>
                 </div>
             </div>
+
+
             
-            <!-- Chat Panel -->
-            <div id="chat-panel" class="flex flex-col gap-3 border-t-2 border-gray-200 pt-3" style="display: none;">
-                <h3 class="text-xl font-bold text-center">💬 Chat</h3>
-                <div id="chat-messages" class="flex-grow space-y-2 overflow-y-auto max-h-64 bg-gray-50 p-2 rounded-lg resize-y min-h-32">
-                    <!-- Chat messages will be here -->
+            <!-- Player Info and Controls -->
+            <div id="left-panel" class="w-full lg:w-1/4 bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-4 flex flex-col gap-3 overflow-y-auto border-2 border-gray-200">
+                <h2 class="text-2xl font-bold text-center">Players</h2>
+                <div id="players-info" class="flex-grow space-y-2">
+                    <!-- Player cards will be here -->
                 </div>
-                <div class="flex gap-2">
-                    <input id="chat-input" type="text" placeholder="Type a message..." class="flex-grow px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" maxlength="200">
-                    <button id="chat-send-btn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-200">Send</button>
+                
+                <!-- Game Link Display (moved from top-right) -->
+                <div id="game-link-display-mobile" class="hidden border-t-2 border-gray-200 pt-3">
+                    <div class="text-xs text-gray-600 mb-1">Game Link:</div>
+                    <div class="flex gap-1">
+                        <input id="game-link-input-mobile" type="text" readonly class="text-xs bg-gray-50 border border-gray-300 rounded px-2 py-1 flex-1 min-w-0" style="font-size: 10px;">
+                        <button id="copy-game-link-btn-mobile" class="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600">
+                            📋
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- Board -->
-        <div class="flex-grow flex items-center justify-center">
-                <div id="board" class="board">
-                <div class="center-board">
-                    <h1 id="board-title" class="text-5xl font-bold text-gray-800 tracking-wider">BUSINESS</h1>
-                    
-                    <!-- 🎲 Dice Display - Center of Board -->
+            
+            <!-- Board -->
+            <div class="flex-grow flex items-center justify-center">
+                    <div id="board" class="board">
+                    <div class="center-board">
+                        <h1 id="board-title" class="text-5xl font-bold text-gray-800 tracking-wider">BUSINESS</h1>
+                        
+                        <!-- 🎲 Dice Display - Center of Board -->
                     <div id="dice-container" class="flex justify-center items-center gap-4 h-24">
                         <div id="dice1-wrapper" class="relative">
                             <span id="dice1" class="dice">🎲</span>
@@ -1481,6 +1546,9 @@ padding-bottom: 20;
                     
                     <!-- 🏠 Manage Properties Button - Center of Board -->
                     <button id="managePropertiesBtn" class="hidden md:block w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white font-bold py-2 px-4 rounded-lg hover:from-purple-700 hover:to-purple-800 transition duration-300 shadow-lg transform hover:scale-105">🏠 Manage Properties</button>
+                    
+                    <!-- 💳 Credit Button - Center of Board -->
+                    <button id="takeCreditBtn" class="hidden md:block w-full bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-bold py-2 px-4 rounded-lg hover:from-emerald-700 hover:to-emerald-800 transition duration-300 shadow-lg transform hover:scale-105">💳 Kredi Al</button>
                     
                     <!-- 🤝 Team Manager Button - Center of Board -->
                     <button id="teamManagerBtn" class="hidden md:block w-full bg-gradient-to-r from-orange-600 to-orange-700 text-white font-bold py-2 px-4 rounded-lg hover:from-orange-700 hover:to-orange-800 transition duration-300 shadow-lg transform hover:scale-105">🤝 Team Manager</button>
@@ -1500,6 +1568,7 @@ padding-bottom: 20;
                     <!-- Mobile controls bar -->
                     <div id="mobile-controls-bar" class="hidden">
                         <button id="managePropertiesBtnMobile" class="bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-yellow-600 transition duration-200">Manage Properties</button>
+                        <button id="takeCreditBtnMobile" class="bg-emerald-500 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-emerald-600 transition duration-200">💳 Kredi Al</button>
                         <button id="teamManagerBtnMobile" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-blue-600 transition duration-200">Team Manager</button>
                         <button id="jokerCardsBtnMobile" class="bg-purple-500 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-purple-600 transition duration-200">Joker Cards</button>
                     </div>
@@ -1521,6 +1590,20 @@ padding-bottom: 20;
                     
                     <button id="property-buy-close" class="mt-4 bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 font-bold">Close</button>
                 </div>
+            </div>
+        </div>
+        
+        </div> <!-- Main Game Area ends -->
+        
+        <!-- 💬 Chat Panel - Bottom Full Width -->
+        <div id="chat-panel" class="w-full bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-4 flex flex-col border-2 border-green-200" style="display: none; max-height: 250px;">
+            <h3 class="text-lg font-bold text-center text-green-600 mb-2">💬 Chat</h3>
+            <div id="chat-messages" class="flex-grow space-y-2 overflow-y-auto bg-gray-50 p-3 rounded-lg border border-gray-200" style="min-height: 120px; max-height: 150px;">
+                <!-- Chat messages will be here -->
+            </div>
+            <div class="flex gap-2 mt-2">
+                <input id="chat-input" type="text" placeholder="Type a message..." class="flex-grow px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" maxlength="200">
+                <button id="chat-send-btn" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-200 font-semibold">📤</button>
             </div>
         </div>
         
@@ -1603,6 +1686,7 @@ padding-bottom: 20;
         window.addEventListener('DOMContentLoaded', updateMobileControlsBar);
         // Button event bindings
         document.getElementById('managePropertiesBtnMobile').onclick = () => document.getElementById('managePropertiesBtn').click();
+        document.getElementById('takeCreditBtnMobile').onclick = () => document.getElementById('takeCreditBtn').click();
         document.getElementById('teamManagerBtnMobile').onclick = () => document.getElementById('teamManagerBtn').click();
         document.getElementById('jokerCardsBtnMobile').onclick = () => document.getElementById('jokerCardsBtn').click();
         
@@ -3087,7 +3171,11 @@ padding-bottom: 20;
                 isLucky: i === luckyPlayerIndex, // Lucky player flag
                 luckyTurnsLeft: i === luckyPlayerIndex ? 3 : 0, // 3 turns of double money
                 jailCount: 0, // Track jail visits
-                doublesCount: 0 // Track lucky doubles
+                doublesCount: 0, // Track lucky doubles
+                // 💳 Kredi Sistemi
+                creditAmount: 0, // Alınan toplam kredi miktarı
+                creditTurnsLeft: 0, // Geri ödeme için kalan tur sayısı
+                creditHistory: [] // Kredi geçmişi
             }));
             
             sendMessage({
@@ -3578,6 +3666,14 @@ padding-bottom: 20;
                             </div>
                             <span class="font-semibold text-green-600 text-xl">💰 $${p.money}</span>
                         </div>
+                        ${p.creditAmount > 0 ? `
+                        <div class="mt-2 bg-red-50 border border-red-300 rounded-lg p-2">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-red-600 font-semibold">💳 Kredi: $${p.creditAmount}</span>
+                                <span class="text-red-500 text-xs">⏰ ${p.creditTurnsLeft} tur kaldı</span>
+                            </div>
+                        </div>
+                        ` : ''}
                         ${propertiesHTML}
                         <div class="flex justify-between items-center mt-2">
                             ${p.inJail ? `<div class="text-red-500 font-bold text-sm flex items-center gap-1">🔒 IN JAIL</div>` : '<div></div>'}
@@ -4187,21 +4283,6 @@ padding-bottom: 20;
             dice2El.textContent = gameData.lastDiceRoll[1] || '🎲';
 
             const canAct = isMyTurn && !currentPlayer.isBankrupt;
-            
-            // 🛡️ Safety check: If it's my turn and turnState is 'rolled' for more than 5 seconds, force action_complete
-            if (isMyTurn && gameData.turnState === 'rolled') {
-                const now = Date.now();
-                if (!window.lastRolledStateTime) {
-                    window.lastRolledStateTime = now;
-                } else if (now - window.lastRolledStateTime > 5000) {
-                    console.warn('⚠️ Turn state stuck in "rolled" for >5s, forcing action_complete');
-                    updateGame({ turnState: 'action_complete' });
-                    window.lastRolledStateTime = null;
-                }
-            } else {
-                window.lastRolledStateTime = null;
-            }
-            
             rollDiceBtn.disabled = !canAct || gameData.turnState !== 'start';
             
             // End turn butonu her zaman görünür ama sadece kendi turunda ve action_complete'de aktif
@@ -4219,6 +4300,9 @@ padding-bottom: 20;
             }
             
             managePropertiesBtn.classList.toggle('hidden', !canAct || (gameData.turnState !== 'start' && gameData.turnState !== 'action_complete'));
+            
+            // 💳 Kredi butonunu göster/gizle
+            takeCreditBtn.classList.toggle('hidden', !canAct || (gameData.turnState !== 'start' && gameData.turnState !== 'action_complete'));
             
             // Mobil butonları da güncelle
             const mobileRollBtn = document.getElementById('mobile-roll-btn');
@@ -4278,6 +4362,13 @@ padding-bottom: 20;
         // --- GAME ACTIONS ---
         rollDiceBtn.addEventListener('click', async () => {
             const currentPlayer = gameData.players[gameData.currentPlayerIndex];
+            
+            // 🚫 Bot kontrolü - Botlar zar atamaz!
+            if (currentPlayer.id !== localPlayer.id) {
+                console.warn('⚠️ Only the current player can roll dice!');
+                return;
+            }
+            
             if (currentPlayer.inJail) {
                 handleJailTurn();
                 return;
@@ -4370,6 +4461,10 @@ padding-bottom: 20;
         // View Trades Button
         const viewTradesBtn = document.getElementById('viewTradesBtn');
         viewTradesBtn.addEventListener('click', viewPendingTrades);
+        
+        // 💳 Credit Button
+        const takeCreditBtn = document.getElementById('takeCreditBtn');
+        takeCreditBtn.addEventListener('click', showCreditModal);
         
         // Team Manager Button
         const teamManagerBtn = document.getElementById('teamManagerBtn');
@@ -4712,10 +4807,13 @@ padding-bottom: 20;
                         // Kart başka birine ait ve bende hissem yok
                         payRent(position);
                     } else {
-                        // Kartın sahibiyim veya hissem var - turn state'i action_complete yap
+                        // Kartın sahibiyim veya hissem var - otomatik turn end
                         addLog('You own a share of this property. No rent to pay.');
-                        // Turn state'i action_complete yap ki End Turn butonu aktif olsun
-                        await updateGame({ turnState: 'action_complete' });
+                        // Kendi yerine gelince turn otomatik end olsun
+                        setTimeout(() => {
+                            updateGame({ turnState: 'action_complete' });
+                            endTurn();
+                        }, 1000);
                     }
                     break;
                 case 'go_to_jail':
@@ -4730,8 +4828,8 @@ padding-bottom: 20;
                     break;
                 case 'free_parking':
                     addLog('🅿️ Resting at Free Parking - nothing happens!');
-                    // Free parking does nothing, so set action_complete for End Turn button
-                    await updateGame({ turnState: 'action_complete' });
+                    // Free parking does nothing, so automatically end turn
+                    setTimeout(() => endTurn(), 1000);
                     break;
                 default:
                     handleAfterLanding();
@@ -4746,30 +4844,8 @@ padding-bottom: 20;
         async function botTurn() {
             const currentPlayer = gameData.players[gameData.currentPlayerIndex];
             
-            // CRITICAL: Only execute if current player is actually a bot
-            if (!currentPlayer || !currentPlayer.isBot) {
-                console.log('⚠️ botTurn called but current player is not a bot, aborting');
-                return;
-            }
-            
-            // Prevent multiple bot turns running at once
-            if (window.isBotTurnInProgress) {
-                console.log('⚠️ Bot turn already in progress, skipping');
-                return;
-            }
-            
-            window.isBotTurnInProgress = true;
-            
             // Wait a bit for realism
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Double-check still bot's turn (race condition protection)
-            const currentPlayerNow = gameData.players[gameData.currentPlayerIndex];
-            if (!currentPlayerNow || !currentPlayerNow.isBot || currentPlayerNow.id !== currentPlayer.id) {
-                console.log('⚠️ Turn changed while bot was waiting, aborting');
-                window.isBotTurnInProgress = false;
-                return;
-            }
             
             // Roll dice
             const die1 = Math.floor(Math.random() * 6) + 1;
@@ -4874,14 +4950,19 @@ padding-bottom: 20;
             const currentPlayer = gameData.players[gameData.currentPlayerIndex];
             const cost = Math.floor(space.price * (sharePercentage / 100));
             
-            // Eğer %100 değilse, ortak seçmesi gerekiyor
-            if (sharePercentage < 100) {
-                // Ortak seçme modalını göster
+            // 🤖 Bot kontrolü - Bot ise direkt %100 alsın, modal gösterme!
+            if (currentPlayer.isBot) {
+                sharePercentage = 100; // Botlar her zaman %100 alır
+            }
+            
+            // Eğer %100 değilse VE oyuncu bot değilse, ortak seçmesi gerekiyor
+            if (sharePercentage < 100 && !currentPlayer.isBot) {
+                // Ortak seçme modalını göster (sadece gerçek oyuncular için)
                 showPartnerSelectionModal(position, sharePercentage, cost);
                 return;
             }
             
-            // %100 ise direkt satın al
+            // %100 ise veya bot ise direkt satın al
             const playersCopy = JSON.parse(JSON.stringify(gameData.players));
             const propertiesCopy = JSON.parse(JSON.stringify(gameData.properties));
             
@@ -4913,6 +4994,14 @@ padding-bottom: 20;
         function showPartnerSelectionModal(position, sharePercentage, cost) {
             const space = gameData.settings.board[position];
             const currentPlayer = gameData.players[gameData.currentPlayerIndex];
+            
+            // 🤖 Bot kontrolü - Bot ise modal gösterme!
+            if (currentPlayer.isBot) {
+                console.warn('⚠️ Bot cannot show partner selection modal!');
+                // Bot için direkt %100 al
+                buyPropertyWithShare(position, 100);
+                return;
+            }
             
             // Get other players who can afford the remaining share
             const remainingShare = 100 - sharePercentage;
@@ -5704,8 +5793,7 @@ padding-bottom: 20;
                 hideModal();
             }
             
-            // Set turn state to action_complete so End Turn button becomes enabled
-            await updateGame({ turnState: 'action_complete' });
+            endTurn();
         }
 
         
@@ -5735,7 +5823,7 @@ padding-bottom: 20;
             
             if (rentToPay === 0) {
                 addLog(`${currentPlayer.name} landed on their own property and pays no rent.`);
-                await updateGame({ turnState: 'action_complete' });
+                endTurn();
                 return;
             }
             
@@ -5764,8 +5852,7 @@ padding-bottom: 20;
                 // Check for bankruptcy after rent payment
                 const isBankrupt = await checkBankruptcy(currentPlayerIndex);
                 if (!isBankrupt) {
-                    // Set turnState to action_complete so End Turn button becomes enabled
-                    await updateGame({ turnState: 'action_complete' });
+                    endTurn();
                 }
                 return;
             }
@@ -5800,8 +5887,7 @@ padding-bottom: 20;
                     // Check for bankruptcy after rent payment
                     const isBankrupt = await checkBankruptcy(currentPlayerIndex);
                     if (!isBankrupt) {
-                        // Set turnState to action_complete so End Turn button becomes enabled
-                        await updateGame({ turnState: 'action_complete' });
+                        endTurn();
                     }
                 }}]
             );
@@ -5817,7 +5903,8 @@ padding-bottom: 20;
             playersCopy[currentPlayerIndex].jailTurns = 0;
             
             addLog(`${playersCopy[currentPlayerIndex].name} was sent to jail!`);
-            await updateGame({ players: playersCopy, turnState: 'action_complete' });
+            await updateGame({ players: playersCopy });
+            endTurn();
         }
 
         async function drawCard(type) {
@@ -5825,7 +5912,7 @@ padding-bottom: 20;
             
             if (!cards || cards.length === 0) {
                 addLog('No cards available in this game mode.');
-                await updateGame({ turnState: 'action_complete' });
+                endTurn();
                 return;
             }
             
@@ -5917,7 +6004,7 @@ padding-bottom: 20;
             // Bot ise modal gösterme, direkt işlemi yap
             if (currentPlayer.isBot) {
                 if (autoClose) {
-                    await updateGame({ turnState: 'action_complete' });
+                    endTurn();
                 }
                 return;
             }
@@ -5926,7 +6013,7 @@ padding-bottom: 20;
             showModal(
                 type === 'chance' ? '❓ Chance Card' : '🎁 Community Chest', 
                 `<p class="text-lg">${actionText}</p>`, 
-                [{ text: 'OK', class: 'bg-blue-500', action: async () => { hideModal(); if (autoClose) await updateGame({ turnState: 'action_complete' }); }}]
+                [{ text: 'OK', class: 'bg-blue-500', action: () => { hideModal(); if (autoClose) endTurn(); }}]
             );
         }
         
@@ -5944,7 +6031,7 @@ padding-bottom: 20;
                 // Check bankruptcy after tax payment
                 const isBankrupt = await checkBankruptcy(currentPlayerIndex);
                 if (!isBankrupt) {
-                    await updateGame({ turnState: 'action_complete' });
+                    endTurn();
                 }
                 return;
             }
@@ -5963,7 +6050,7 @@ padding-bottom: 20;
                     // Check for bankruptcy after tax payment
                     const isBankrupt = await checkBankruptcy(currentPlayerIndex);
                     if (!isBankrupt) {
-                        await updateGame({ turnState: 'action_complete' });
+                        endTurn();
                     }
                 }}]
             );
@@ -5973,6 +6060,9 @@ padding-bottom: 20;
             const currentPlayer = gameData.players[gameData.currentPlayerIndex];
             const isDouble = gameData.lastDiceRoll && gameData.lastDiceRoll[0] === gameData.lastDiceRoll[1];
             const doublesCount = currentPlayer.doublesCount || 0;
+            
+            // 💳 Kredi kontrolü yap (tur bitmeden önce)
+            await checkCreditPayment(gameData.currentPlayerIndex);
             
             // 3 doubles in a row = go to jail
             if (isDouble && doublesCount >= 3) {
@@ -6026,11 +6116,12 @@ padding-bottom: 20;
                 addLog(`${gameData.players[gameData.currentPlayerIndex].name} rolled doubles and got out of jail!`);
                 const playersCopy = JSON.parse(JSON.stringify(gameData.players));
                 playersCopy[gameData.currentPlayerIndex].inJail = false;
-                await updateGame({ players: playersCopy, turnState: 'action_complete' });
+                await updateGame({ players: playersCopy });
+                endTurn(); // Allows normal turn to proceed
             } else {
                 addLog(`${gameData.players[gameData.currentPlayerIndex].name} failed to roll doubles.`);
                 // In a full game, track jail turns and force payment after 3 turns.
-                await updateGame({ turnState: 'action_complete' });
+                endTurn(); // Forfeit rest of turn
             }
         }
         
@@ -6040,12 +6131,19 @@ padding-bottom: 20;
             playersCopy[gameData.currentPlayerIndex].money -= 50;
             playersCopy[gameData.currentPlayerIndex].inJail = false;
             addLog(`${playersCopy[gameData.currentPlayerIndex].name} paid $50 to get out of jail.`);
-            await updateGame({ players: playersCopy, turnState: 'action_complete' });
+            await updateGame({ players: playersCopy });
+            endTurn();
         }
 
         managePropertiesBtn.addEventListener('click', () => {
-             const currentPlayer = gameData.players[gameData.currentPlayerIndex];
-             const ownedProperties = gameData.properties.filter(p => p.ownerId === currentPlayer.id);
+             // 🔧 DÜZELTİLDİ: Sıradaki oyuncu yerine kendi mülklerini göster
+             const myPlayer = gameData.players.find(p => p.id === localPlayer.id);
+             if (!myPlayer) {
+                 showModal('Error', 'Oyuncu bulunamadı.', [{text: 'Tamam', class: 'bg-red-500', action: hideModal}]);
+                 return;
+             }
+             
+             const ownedProperties = gameData.properties.filter(p => p.ownerId === myPlayer.id);
              
              let modalHTML = '<div class="text-left max-h-96 overflow-y-auto">';
              if (ownedProperties.length === 0) {
@@ -6054,11 +6152,11 @@ padding-bottom: 20;
                 ownedProperties.forEach(prop => {
                     const space = gameData.settings.board[prop.spaceIndex];
                     if (space.type === 'property') {
-                       const hasMonopoly = checkMonopoly(currentPlayer.id, space.color);
-                       const canBuyHouse = hasMonopoly && currentPlayer.money >= space.houseCost && prop.houses < 5 && !prop.mortgaged;
+                       const hasMonopoly = checkMonopoly(myPlayer.id, space.color);
+                       const canBuyHouse = hasMonopoly && myPlayer.money >= space.houseCost && prop.houses < 5 && !prop.mortgaged;
                        const canSellHouse = prop.houses > 0;
                        const canMortgage = !prop.mortgaged && prop.houses === 0;
-                       const canUnmortgage = prop.mortgaged && currentPlayer.money >= (space.price / 4);
+                       const canUnmortgage = prop.mortgaged && myPlayer.money >= (space.price / 4);
                        
                        const mortgageValue = Math.floor(space.price / 4);
                        const houseSellPrice = Math.floor(space.houseCost * 0.75);
@@ -6721,7 +6819,287 @@ padding-bottom: 20;
             return player.money + totalPropertyValue;
         }
 
-        // 🚨 Check for bankruptcy after money deduction
+        // � KREDİ SİSTEMİ FONKSİYONLARI
+        
+        /**
+         * Oyuncunun kredi limitini hesaplar
+         * Kredi Limit = Σ [ (Mülk Fiyatı + Bina Sayısı × Bina Maliyeti) / 2 ]
+         * Sadece ev veya otel bulunan mülkler için hesaplanır
+         */
+        function calculateCreditLimit(player) {
+            let totalLiquidationValue = 0;
+            
+            // Oyuncunun sahip olduğu tüm mülkleri kontrol et
+            gameData.properties.forEach((property, index) => {
+                // Mülk bu oyuncuya ait mi?
+                const isOwner = property.ownerId === player.id || 
+                               (property.owners && property.owners[player.id]);
+                
+                if (!isOwner || property.houses === 0) return; // Ev/otel yoksa atla
+                
+                const space = gameData.settings.board[index];
+                if (space.type !== 'property') return; // Sadece normal mülkler
+                
+                // Bina Birimi Sayısı (1-4 ev veya 5 otel)
+                const buildingUnits = property.houses;
+                
+                // Bina Maliyeti
+                const buildingCost = space.houseCost || 0;
+                
+                // Mülk Fiyatı
+                const propertyPrice = space.price || 0;
+                
+                // Likidasyon Değeri = (P + B × C) / 2
+                const liquidationValue = (propertyPrice + (buildingUnits * buildingCost)) / 2;
+                
+                totalLiquidationValue += liquidationValue;
+            });
+            
+            return Math.floor(totalLiquidationValue);
+        }
+        
+        /**
+         * Kredi alma modalini gösterir
+         */
+        function showCreditModal() {
+            const currentPlayer = gameData.players[gameData.currentPlayerIndex];
+            
+            // Sadece kendi turunda ve oyuncu bankrupt değilse
+            if (currentPlayer.id !== localPlayer.id) {
+                showModal('⚠️ Uyarı', 'Kredi almak için kendi turunuzu beklemelisiniz.', [
+                    {text: 'Tamam', class: 'bg-blue-500', action: hideModal}
+                ]);
+                return;
+            }
+            
+            if (currentPlayer.isBankrupt) {
+                showModal('⚠️ Uyarı', 'İflas etmiş oyuncular kredi alamaz.', [
+                    {text: 'Tamam', class: 'bg-blue-500', action: hideModal}
+                ]);
+                return;
+            }
+            
+            // Aktif kredi var mı kontrol et
+            if (currentPlayer.creditAmount > 0) {
+                const turnsLeft = currentPlayer.creditTurnsLeft || 0;
+                showModal('⚠️ Aktif Krediniz Var', 
+                    `<div class="text-left">
+                        <p class="mb-2">Halihazırda <strong class="text-red-600">$${currentPlayer.creditAmount}</strong> krediniz var.</p>
+                        <p class="mb-2">Kalan geri ödeme süresi: <strong>${turnsLeft}</strong> tur</p>
+                        <p class="text-sm text-gray-600">Mevcut kredinizi geri ödemeden yeni kredi alamazsınız.</p>
+                    </div>`, 
+                    [
+                        {text: 'Tamam', class: 'bg-blue-500', action: hideModal},
+                        {text: '💰 Şimdi Öde', class: 'bg-green-500', action: () => {
+                            hideModal();
+                            payCreditNow(currentPlayer);
+                        }}
+                    ]
+                );
+                return;
+            }
+            
+            // Kredi limitini hesapla
+            const creditLimit = calculateCreditLimit(currentPlayer);
+            
+            if (creditLimit === 0) {
+                showModal('❌ Kredi Alamazsınız', 
+                    `<div class="text-left">
+                        <p class="mb-2">Kredi alabilmek için en az bir mülkünüzde <strong>ev veya otel</strong> olmalıdır.</p>
+                        <p class="text-sm text-gray-600">💡 İpucu: Monopol oluşturup ev/otel satın alarak kredi limitinizi artırabilirsiniz.</p>
+                    </div>`, 
+                    [{text: 'Tamam', class: 'bg-blue-500', action: hideModal}]
+                );
+                return;
+            }
+            
+            // Kredi alma formu göster
+            const modalContent = `
+                <div class="text-left space-y-4">
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <p class="text-sm text-gray-600">Kredi Limitiniz</p>
+                        <p class="text-3xl font-bold text-green-600">$${creditLimit}</p>
+                    </div>
+                    
+                    <div class="bg-blue-50 p-3 rounded">
+                        <p class="text-sm font-semibold mb-2">📋 Kredi Koşulları:</p>
+                        <ul class="text-sm space-y-1 list-disc ml-5">
+                            <li>Geri ödeme süresi: <strong>5 tur</strong></li>
+                            <li>Ödeyemezseniz: <strong>İflas edersiniz</strong></li>
+                            <li>Tüm mülkleriniz bankaya geçer</li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Çekmek istediğiniz tutar:</label>
+                        <input type="number" id="creditAmountInput" 
+                               class="w-full px-4 py-2 border rounded-lg" 
+                               min="1" max="${creditLimit}" value="${creditLimit}"
+                               placeholder="Miktar girin">
+                    </div>
+                    
+                    <p class="text-xs text-gray-500">
+                        💡 Kredi limitiniz, mülklerinizin ve binaların likidasyon değerine göre hesaplanmıştır.
+                    </p>
+                </div>
+            `;
+            
+            showModal('💳 Kredi Al', modalContent, [
+                {text: 'İptal', class: 'bg-gray-500', action: hideModal},
+                {text: '✅ Kredi Çek', class: 'bg-green-600', action: () => {
+                    const amount = parseInt(document.getElementById('creditAmountInput').value);
+                    if (isNaN(amount) || amount <= 0) {
+                        alert('Lütfen geçerli bir miktar girin!');
+                        return;
+                    }
+                    if (amount > creditLimit) {
+                        alert(`Maksimum kredi limitiniz $${creditLimit}'dir!`);
+                        return;
+                    }
+                    hideModal();
+                    takeCredit(amount);
+                }}
+            ]);
+        }
+        
+        /**
+         * Kredi çeker
+         */
+        async function takeCredit(amount) {
+            const currentPlayerIndex = gameData.currentPlayerIndex;
+            const playersCopy = JSON.parse(JSON.stringify(gameData.players));
+            const player = playersCopy[currentPlayerIndex];
+            
+            // Kredi ver
+            player.money += amount;
+            player.creditAmount = amount;
+            player.creditTurnsLeft = 5;
+            
+            if (!player.creditHistory) player.creditHistory = [];
+            player.creditHistory.push({
+                amount: amount,
+                turn: gameData.turnCount || 0,
+                action: 'taken'
+            });
+            
+            addLog(`💳 ${player.name} $${amount} kredi çekti! (5 tur içinde geri ödeme gerekli)`);
+            
+            await updateGame({ players: playersCopy });
+            
+            showModal('✅ Kredi Onaylandı', 
+                `<div class="text-center">
+                    <p class="text-2xl mb-4">💰</p>
+                    <p class="mb-2"><strong>$${amount}</strong> krediniz hesabınıza yatırıldı!</p>
+                    <p class="text-sm text-orange-600">⏰ 5 tur içinde geri ödemeyi unutmayın!</p>
+                </div>`, 
+                [{text: 'Tamam', class: 'bg-green-500', action: hideModal}]
+            );
+        }
+        
+        /**
+         * Krediyi şimdi öder
+         */
+        async function payCreditNow(player) {
+            const playerIndex = gameData.players.findIndex(p => p.id === player.id);
+            const playersCopy = JSON.parse(JSON.stringify(gameData.players));
+            const currentPlayer = playersCopy[playerIndex];
+            
+            if (currentPlayer.money < currentPlayer.creditAmount) {
+                showModal('❌ Yetersiz Bakiye', 
+                    `<p>Kredi tutarı: <strong>$${currentPlayer.creditAmount}</strong></p>
+                     <p>Mevcut paranız: <strong>$${currentPlayer.money}</strong></p>
+                     <p class="text-red-600 mt-2">Ödeme için yeterli paranız yok!</p>`, 
+                    [{text: 'Tamam', class: 'bg-blue-500', action: hideModal}]
+                );
+                return;
+            }
+            
+            // Krediyi öde
+            currentPlayer.money -= currentPlayer.creditAmount;
+            const paidAmount = currentPlayer.creditAmount;
+            currentPlayer.creditAmount = 0;
+            currentPlayer.creditTurnsLeft = 0;
+            
+            if (!currentPlayer.creditHistory) currentPlayer.creditHistory = [];
+            currentPlayer.creditHistory.push({
+                amount: paidAmount,
+                turn: gameData.turnCount || 0,
+                action: 'paid'
+            });
+            
+            addLog(`✅ ${currentPlayer.name} $${paidAmount} krediyi geri ödedi!`);
+            
+            await updateGame({ players: playersCopy });
+            
+            showModal('✅ Kredi Ödendi', 
+                `<p class="text-green-600 font-bold">Krediniz başarıyla ödendi!</p>
+                 <p class="mt-2">Ödenen tutar: $${paidAmount}</p>`, 
+                [{text: 'Tamam', class: 'bg-green-500', action: hideModal}]
+            );
+        }
+        
+        /**
+         * Her tur sonunda kredi kontrolü yapar
+         */
+        async function checkCreditPayment(playerIndex) {
+            const playersCopy = JSON.parse(JSON.stringify(gameData.players));
+            const player = playersCopy[playerIndex];
+            
+            // Kredi yoksa atla
+            if (player.creditAmount <= 0) return;
+            
+            // Tur sayacını azalt
+            player.creditTurnsLeft--;
+            
+            await updateGame({ players: playersCopy });
+            
+            // Son tur uyarısı
+            if (player.creditTurnsLeft === 1) {
+                if (player.id === localPlayer.id) {
+                    showModal('⚠️ SON TUR UYARISI!', 
+                        `<div class="text-center">
+                            <p class="text-4xl mb-4">⏰</p>
+                            <p class="text-xl font-bold text-red-600 mb-2">SADECE 1 TUR KALDI!</p>
+                            <p class="mb-2">Kredi tutarı: <strong>$${player.creditAmount}</strong></p>
+                            <p class="text-sm text-gray-600">Bir sonraki turda ödeme yapmazsanız iflas edeceksiniz!</p>
+                        </div>`, 
+                        [{text: 'Anladım', class: 'bg-red-600', action: hideModal}]
+                    );
+                }
+                addLog(`⚠️ ${player.name} için son tur! Kredi: $${player.creditAmount}`);
+            }
+            
+            // Süre doldu - İflas et
+            if (player.creditTurnsLeft <= 0) {
+                addLog(`💥 ${player.name} krediyi ödeyemedi ve iflas etti!`);
+                
+                if (player.id === localPlayer.id) {
+                    showModal('💥 KREDİ ÖDENEMEDİ - İFLAS!', 
+                        `<div class="text-center">
+                            <p class="text-4xl mb-4">💸</p>
+                            <p class="text-xl font-bold text-red-600 mb-4">5 tur içinde krediyi ödeyemediniz!</p>
+                            <p class="mb-2">Ödenmemiş kredi: <strong>$${player.creditAmount}</strong></p>
+                            <p class="text-sm text-gray-600">Tüm mülkleriniz bankaya devredildi.</p>
+                        </div>`, 
+                        [{text: 'İflas Et', class: 'bg-red-600', action: () => {
+                            hideModal();
+                            sendMessage({
+                                type: 'declare_bankruptcy',
+                                playerId: localPlayer.id
+                            });
+                        }}]
+                    );
+                } else {
+                    // Bot veya diğer oyuncular için otomatik iflas
+                    sendMessage({
+                        type: 'declare_bankruptcy',
+                        playerId: player.id
+                    });
+                }
+            }
+        }
+
+        // �🚨 Check for bankruptcy after money deduction
         async function checkBankruptcy(playerIndex) {
             const player = gameData.players[playerIndex];
             
@@ -6804,15 +7182,11 @@ padding-bottom: 20;
         function checkPendingTrades() {
             if (!gameData || !gameData.trades) return;
             
-            // Skip if local player is bankrupt
-            const myPlayer = gameData.players.find(p => p.id === localPlayer.id);
-            if (!myPlayer || myPlayer.isBankrupt) return;
-            
             // First, handle bot trades automatically
             const botTrades = gameData.trades.filter(t => {
                 if (!t || !t.id || t.status !== 'pending') return false;
                 const toPlayer = gameData.players.find(p => p.id === t.toId);
-                return toPlayer && toPlayer.isBot && !toPlayer.isBankrupt;
+                return toPlayer && toPlayer.isBot;
             });
             
             // Process bot trades automatically
@@ -6820,9 +7194,8 @@ padding-bottom: 20;
                 const toPlayer = gameData.players.find(p => p.id === trade.toId);
                 if (toPlayer && toPlayer.isBot && !shownTradeIds.has(trade.id)) {
                     shownTradeIds.add(trade.id);
-                    console.log(`🤖 Bot ${toPlayer.name} received trade offer ${trade.id}, processing...`);
-                    // Delay to prevent race conditions
-                    setTimeout(() => botDecideTrade(trade), 500);
+                    console.log(`🤖 Bot ${toPlayer.name} received trade offer, processing...`);
+                    botDecideTrade(trade);
                 }
             });
             
@@ -6976,15 +7349,10 @@ padding-bottom: 20;
             const fromPlayer = gameData.players.find(p => p && p.id === trade.fromId);
             const toPlayer = gameData.players.find(p => p && p.id === trade.toId);
             
-            // Check if current player is involved in trade
-            const currentPlayer = gameData.players[gameData.currentPlayerIndex];
-            const isCurrentPlayerInvolved = currentPlayer && (currentPlayer.id === trade.fromId || currentPlayer.id === trade.toId);
-            
             await updateGame({
                 players: playersCopy,
                 properties: propertiesCopy,
                 trades: updatedTrades,
-                turnState: isCurrentPlayerInvolved ? 'action_complete' : gameData.turnState,
                 gameLog: [...gameData.gameLog, `🤝 ${toPlayer.name} accepted a trade from ${fromPlayer.name}!`]
             });
             
@@ -7268,6 +7636,12 @@ padding-bottom: 20;
             const space = gameData.settings.board[position];
             const currentPlayer = gameData.players[gameData.currentPlayerIndex];
             
+            // 🤖 Bot kontrolü - Bot ise panel gösterme!
+            if (currentPlayer.isBot) {
+                console.warn('⚠️ Bot cannot show property buy panel! Bot should use botDecidePropertyPurchase instead.');
+                return;
+            }
+            
             propertyBuyTitle.textContent = `🏡 Buy ${space.name}?`;
             propertyBuyName.textContent = space.name;
             propertyBuyDesc.innerHTML = `
@@ -7440,8 +7814,11 @@ padding-bottom: 20;
         function addChatMessage(playerName, text, isOwn = false) {
             const chatMessages = document.getElementById('chat-messages');
             const messageDiv = document.createElement('div');
-            messageDiv.className = `p-2 rounded-lg max-w-xs break-words ${isOwn ? 'bg-blue-100 self-end ml-auto' : 'bg-white'}`;
-            messageDiv.innerHTML = `<strong>${playerName}:</strong> ${text}`;
+            messageDiv.className = `chat-message ${isOwn ? 'bg-blue-50 border-blue-400' : ''}`;
+            messageDiv.innerHTML = `
+                <div class="sender">${playerName}</div>
+                <div class="text">${text}</div>
+            `;
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
@@ -7739,4 +8116,3 @@ padding-bottom: 20;
 
 </body>
 </html>
-

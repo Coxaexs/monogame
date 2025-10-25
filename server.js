@@ -190,6 +190,18 @@ wss.on('connection', (ws, req) => {
                 case 'add_bot':
                     handleAddBot(ws, message);
                     break;
+                case 'roll_dice':
+                    // Bot veya oyuncu zar atmak istediğinde
+                    handleRollDice(ws, message);
+                    break;
+                case 'buy_property':
+                    // Bot veya oyuncu mülk almak istediğinde
+                    handleBuyProperty(ws, message);
+                    break;
+                case 'end_turn':
+                    // Bot veya oyuncu turnunu bitirmek istediğinde
+                    handleEndTurn(ws, message);
+                    break;
                 default:
                     ws.send(JSON.stringify({ type: 'error', message: 'Unknown message type' }));
             }
@@ -573,18 +585,44 @@ function handleAddBot(ws, message) {
     
     // Create bot player
     const botId = `bot_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    const botNames = ['Bot Alice', 'Bot Bob', 'Bot Charlie', 'Bot Diana', 'Bot Eve', 'Bot Frank'];
-    const botName = botNames[Math.floor(Math.random() * botNames.length)];
-    const botColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'];
-    const botColor = botColors[Math.floor(Math.random() * botColors.length)];
+    const botNames = ['Bot Flo', 'Bot Kiwi', 'Bot Escanor', 'Bot Vallhol', 'Bot Shan', 'Bot Frank'];
+    // Mevcut oyuncuların isimlerini al
+    const existingBotNames = game.players.filter(p => p.isBot).map(p => p.name);
+    // Kullanılmamış bot ismini seç
+    const availableBotNames = botNames.filter(name => !existingBotNames.includes(name));
+    if (availableBotNames.length === 0) {
+        ws.send(JSON.stringify({ type: 'error', message: 'No more bots available' }));
+        return;
+    }
+    const botName = availableBotNames[Math.floor(Math.random() * availableBotNames.length)];
+    let botColor, botCharacter, botEmoji;
     const botCharacters = ['dog', 'car', 'ship', 'hat', 'thimble', 'boot', 'wheelbarrow', 'iron'];
-    const botCharacter = botCharacters[Math.floor(Math.random() * botCharacters.length)];
-    
+    if (botName === 'Bot Shan') {
+        botColor = '#964b00';
+        botCharacter = 'shan';
+        botEmoji = '💩';
+    } else if(botName == 'Bot Kiwi'){
+        botColor = '#25e000ff';
+        botCharacter = 'bot kiwi';
+        botEmoji = '🥝'; 
+    }
+    else if(botName == 'Bot Flo'){
+        botColor = '#ff00ddff';
+        botCharacter = 'bot flo';
+        botEmoji = '⚓'; 
+    }
+     else {
+        const botColors = ['#003cffff' , '#575757ff', '#eeff00ff', '#FFEAA7', '#DDA0DD'];
+        botColor = botColors[Math.floor(Math.random() * botColors.length)];
+        botCharacter = botCharacters[Math.floor(Math.random() * botCharacters.length)];
+        botEmoji = undefined;
+    }
     const botPlayer = {
         id: botId,
         name: botName,
         color: botColor,
         character: botCharacter,
+        emoji: botEmoji,
         money: game.settings.startingMoney || 1500,
         position: 0,
         inJail: false,
@@ -604,6 +642,147 @@ function handleAddBot(ws, message) {
     });
     
     console.log(`🤖 Bot ${botName} added to game ${gameId}`);
+}
+
+// Bot ve oyuncu için zar atma, mülk alma ve turu bitirme işlemlerini loglamak için temel handler fonksiyonları
+function handleRollDice(ws, message) {
+    const gameId = ws.gameId;
+    if (!gameId || !games.has(gameId)) {
+        console.log('⚠️ handleRollDice: No gameId or game not found');
+        return;
+    }
+    const game = games.get(gameId);
+    const player = game.players[game.currentPlayerIndex];
+    if (!player || player.isBankrupt) {
+        console.log('⚠️ handleRollDice: No player or player bankrupt');
+        return;
+    }
+    console.log(`🎲 ${player.name} rolling dice...`);
+    // Zar at
+    const die1 = Math.floor(Math.random() * 6) + 1;
+    const die2 = Math.floor(Math.random() * 6) + 1;
+    const total = die1 + die2;
+    player.position = (player.position + total) % game.settings.board.length;
+    game.lastDiceRoll = [die1, die2];
+    game.turnState = 'rolled';
+    game.gameLog = game.gameLog || [];
+    game.gameLog.push(`🎲 ${player.name} rolled ${die1} + ${die2} = ${total}`);
+    
+    // Şans veya Kamu Sandığı kartına geldiyse kart çek
+    const landedSpace = game.settings.board[player.position];
+    
+    if (landedSpace.type === 'chance' || landedSpace.type === 'community_chest') {
+        const deck = landedSpace.type === 'chance' ? defaultCards.chance : defaultCards.community_chest;
+        const card = deck[Math.floor(Math.random() * deck.length)];
+        game.gameLog.push(`🃏 ${player.name} drew a card: ${card.text}`);
+        // Basit kart efektleri
+        if (card.action === 'add_money') {
+            player.money += card.amount;
+        } else if (card.action === 'remove_money') {
+            player.money -= card.amount;
+        } else if (card.action === 'move_to') {
+            player.position = card.space;
+            if (card.collect) player.money += 200;
+        } else if (card.action === 'move_back') {
+            player.position = (player.position - card.amount + game.settings.board.length) % game.settings.board.length;
+        } else if (card.action === 'go_to_jail') {
+            player.position = 10; // Jail
+            player.inJail = true;
+        }
+    }
+    
+    // Tax kontrolü (Income Tax, Luxury Tax)
+    if (landedSpace.type === 'tax') {
+        const taxAmount = landedSpace.price;
+        player.money -= taxAmount;
+        game.gameLog.push(`💰 ${player.name} paid $${taxAmount} in ${landedSpace.name}`);
+        console.log(`💰 ${player.name} paid tax: $${taxAmount}`);
+    }
+    
+    // Kira kontrolü - başka oyuncunun mülküne geldiyse
+    if (landedSpace.type === 'property') {
+        const prop = game.properties[player.position];
+        if (prop && prop.ownerId && prop.ownerId !== player.id) {
+            const owner = game.players.find(p => p.id === prop.ownerId);
+            if (owner && !owner.isBankrupt) {
+                // rent is an array: [base, 1 house, 2 houses, 3 houses, 4 houses, hotel]
+                const houses = prop.houses || 0;
+                const rent = landedSpace.rent ? landedSpace.rent[houses] : landedSpace.price * 0.1;
+                
+                player.money -= rent;
+                owner.money += rent;
+                game.gameLog.push(`💵 ${player.name} paid $${rent} rent to ${owner.name} for ${landedSpace.name}`);
+                console.log(`💵 ${player.name} paid rent: $${rent} to ${owner.name}`);
+            }
+        }
+    }
+    
+    // Broadcast
+    broadcastToGame(gameId, { type: 'game_updated', game });
+    // Ayrıca sender'a da gönder
+    ws.send(JSON.stringify({ type: 'game_updated', game }));
+}
+
+function handleBuyProperty(ws, message) {
+    const gameId = ws.gameId;
+    if (!gameId || !games.has(gameId)) {
+        console.log('⚠️ handleBuyProperty: No gameId or game not found');
+        return;
+    }
+    const game = games.get(gameId);
+    const player = game.players[game.currentPlayerIndex];
+    if (!player || player.isBankrupt) {
+        console.log('⚠️ handleBuyProperty: No player or player bankrupt');
+        return;
+    }
+    const position = player.position;
+    const prop = game.properties[position];
+    const space = game.settings.board[position];
+    
+    console.log(`🏠 ${player.name} trying to buy property at position ${position}`);
+    console.log(`   Space: ${space ? space.name : 'N/A'} (type: ${space ? space.type : 'N/A'})`);
+    console.log(`   Property ownerId: ${prop ? prop.ownerId : 'N/A'}`);
+    console.log(`   Player money: $${player.money}, Price: $${space ? space.price : 'N/A'}`);
+    
+    if (space && space.type === 'property' && prop && !prop.ownerId && player.money >= space.price) {
+        prop.ownerId = player.id;
+        player.money -= space.price;
+        game.gameLog = game.gameLog || [];
+        game.gameLog.push(`🏠 ${player.name} bought ${space.name} for $${space.price}`);
+        console.log(`✅ ${player.name} successfully bought ${space.name}!`);
+        broadcastToGame(gameId, { type: 'game_updated', game });
+        ws.send(JSON.stringify({ type: 'game_updated', game }));
+    } else {
+        const reasons = [];
+        if (!space || space.type !== 'property') reasons.push('not a property');
+        if (!prop) reasons.push('property data missing');
+        if (prop && prop.ownerId) reasons.push('already owned');
+        if (space && player.money < space.price) reasons.push('insufficient funds');
+        console.log(`⚠️ Cannot buy: ${reasons.join(', ')}`);
+    }
+}
+
+function handleEndTurn(ws, message) {
+    const gameId = ws.gameId;
+    if (!gameId || !games.has(gameId)) {
+        console.log('⚠️ handleEndTurn: No gameId or game not found');
+        return;
+    }
+    const game = games.get(gameId);
+    console.log(`⏭️ ${game.players[game.currentPlayerIndex].name} ending turn...`);
+    // Sıradaki oyuncuya geç
+    let nextPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
+    // Bankrupt olanları atla
+    while (game.players[nextPlayerIndex].isBankrupt) {
+        nextPlayerIndex = (nextPlayerIndex + 1) % game.players.length;
+    }
+    game.currentPlayerIndex = nextPlayerIndex;
+    game.turnState = 'start';
+    game.lastDiceRoll = [0, 0];
+    game.gameLog = game.gameLog || [];
+    game.gameLog.push(`⏭️ Turn ended. It's now ${game.players[nextPlayerIndex].name}'s turn.`);
+    broadcastToGame(gameId, { type: 'game_updated', game });
+    ws.send(JSON.stringify({ type: 'game_updated', game }));
 }
 
 // 🔄 Periodic game state synchronization
